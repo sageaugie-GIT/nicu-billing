@@ -1,0 +1,1612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>NICU Billing</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: -apple-system, 'Inter', system-ui, sans-serif; background: #f0f4f8; min-height: 100vh; }
+  #app { max-width: 520px; margin: 0 auto; padding: 12px; padding-bottom: 40px; }
+
+  .header { background: #0d2a3e; border-radius: 12px; padding: 13px 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+  .header-left .eyebrow { color: #7ec8e3; font-size: 9px; letter-spacing: 0.12em; font-weight: 700; text-transform: uppercase; }
+  .header-left .day-name { color: #fff; font-size: 18px; font-weight: 700; margin-top: 1px; }
+  .header-left .sub { color: #4a8aaa; font-size: 10px; }
+  .header-right { text-align: right; }
+  .header-right .wk-label { color: #7ec8e3; font-size: 9px; font-weight: 700; }
+  .header-right .wk-num { color: #fff; font-size: 24px; font-weight: 800; line-height: 1; }
+  .header-right .wk-sub { color: #4a7a94; font-size: 9px; }
+
+  .day-tabs { display: flex; gap: 4px; margin-bottom: 9px; }
+  .day-tab { flex: 1; padding: 6px 1px; border: none; border-radius: 6px; font-size: 10px; font-weight: 500; cursor: pointer; position: relative; background: #dce6ef; color: #4a6070; }
+  .day-tab.active { background: #1a6fa8; color: #fff; font-weight: 700; }
+  .day-dot { position: absolute; top: 2px; right: 2px; width: 5px; height: 5px; border-radius: 50%; background: #1a6fa8; }
+  .day-tab.active .day-dot { background: #7ec8e3; }
+  input[type="date"] { -webkit-appearance: none; appearance: none; }
+  input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0.5; width: 10px; }
+
+  .view-tabs { display: flex; gap: 5px; margin-bottom: 9px; }
+  .view-tab { flex: 1; padding: 7px; border: none; border-radius: 7px; font-size: 11px; font-weight: 600; cursor: pointer; background: #dce6ef; color: #4a6070; }
+  .view-tab.active { background: #0d2a3e; color: #fff; }
+
+  .vc-counts { display: flex; gap: 6px; margin-bottom: 8px; }
+  .vc-card { flex: 1; background: #fff; border-radius: 7px; padding: 6px 8px; }
+  .vc-num { font-size: 16px; font-weight: 800; }
+  .vc-lbl { font-size: 10px; font-weight: 700; color: #2a3540; }
+  .vc-desc { font-size: 9px; color: #8a95a0; line-height: 1.2; }
+
+  .progress-bar-wrap { background: #fff; border-radius: 7px; padding: 8px 12px; margin-bottom: 8px; display: flex; align-items: center; gap: 9px; }
+  .progress-track { flex: 1; height: 6px; background: #e0e8f0; border-radius: 3px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+  .progress-label { font-size: 11px; font-weight: 700; min-width: 38px; text-align: right; }
+
+  .patient-list { background: #fff; border-radius: 10px; padding: 8px 11px; margin-bottom: 9px; }
+  .pt-col-headers { display: grid; grid-template-columns: 82px 56px 1fr 14px; gap: 7px; padding-bottom: 4px; border-bottom: 2px solid #e0e8f0; margin-bottom: 2px; }
+  .pt-col-vc-wrap { display: flex; gap: 4px; }
+  .pt-col-hdr { font-size: 9px; font-weight: 700; color: #8a95a0; text-transform: uppercase; }
+  .pt-col-vc-hdr { flex: 1; text-align: center; font-size: 9px; font-weight: 700; }
+
+  .pt-row { border-bottom: 1px solid #e8ecf0; padding-bottom: 4px; margin-bottom: 2px; }
+  .pt-row-main { display: flex; align-items: center; gap: 7px; padding-top: 6px; }
+  .pt-info { width: 82px; flex-shrink: 0; }
+  .pt-num { font-size: 9px; color: #8a95a0; font-family: monospace; }
+  .pt-name { font-size: 10px; font-weight: 700; color: #1a2a3a; line-height: 1.2; }
+  .pt-hcn { font-size: 9px; color: #6a7a8a; font-family: monospace; }
+  .pt-unset { font-size: 9px; color: #c0ccd8; font-style: italic; }
+  .vc-btns { display: flex; gap: 4px; flex: 1; }
+  .vc-btn { flex: 1; padding: 6px 2px; border-radius: 5px; font-size: 10px; cursor: pointer; transition: all 0.1s; border: 2px solid #dde3ea; background: #f8fafc; color: #6b7a8a; }
+  .vc-btn.sel { color: #fff; font-weight: 700; }
+  .pt-check { width: 14px; flex-shrink: 0; font-size: 13px; }
+
+  .pt-extras { margin-left: 89px; margin-top: 3px; }
+  .pill { display: inline-block; color: #fff; border-radius: 4px; padding: 1px 5px; font-size: 9px; font-weight: 700; margin-right: 3px; margin-bottom: 2px; white-space: nowrap; }
+
+  .pt-actions { display: flex; gap: 4px; margin-left: 89px; margin-bottom: 3px; margin-top: 3px; }
+  .pt-action-btn { padding: 2px 7px; font-size: 9px; border-radius: 4px; cursor: pointer; font-weight: 600; background: #fff; }
+
+  .picker { margin-left: 89px; margin-top: 5px; background: #f4f8fc; border-radius: 7px; padding: 7px; }
+  .picker-title { font-size: 10px; font-weight: 700; color: #4a6a8a; margin-bottom: 5px; }
+  .picker-grid { display: flex; flex-wrap: wrap; gap: 4px; }
+  .picker-btn { padding: 4px 8px; border-radius: 5px; font-size: 10px; cursor: pointer; font-weight: 500; background: #fff; border: 1px solid #c0ccd8; color: #4a5a6a; }
+  .picker-btn.sel { color: #fff; font-weight: 700; border-width: 2px; }
+  .picker-btn .ohip { font-size: 9px; opacity: 0.75; margin-left: 3px; }
+
+  .adhoc-tally { background: #fff5f0; border: 1px solid #f0d0c0; border-radius: 8px; padding: 8px 12px; margin-bottom: 8px; }
+  .adhoc-tally-title { font-size: 10px; font-weight: 700; color: #8a3a1a; margin-bottom: 5px; text-transform: uppercase; }
+  .adhoc-tally-items { display: flex; flex-wrap: wrap; gap: 5px; }
+  .adhoc-tally-item { background: #fff; border-radius: 5px; padding: 3px 8px; font-size: 10px; }
+
+  .bottom-btns { display: flex; gap: 7px; }
+  .btn-primary { flex: 2; padding: 10px; border: none; border-radius: 7px; background: #1a6fa8; color: #fff; font-weight: 700; font-size: 12px; cursor: pointer; }
+  .btn-primary:disabled { background: #c0ccd8; cursor: not-allowed; }
+  .btn-danger { flex: 1; padding: 10px; background: #fff; color: #8a4a1a; border: 1px solid #e0ccc0; border-radius: 7px; font-weight: 600; font-size: 12px; cursor: pointer; }
+
+  .summary-box { background: #fff; border-radius: 10px; padding: 11px 13px; margin-bottom: 9px; }
+  .summary-title { font-size: 10px; font-weight: 700; color: #0d2a3e; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 7px; }
+  .summary-table { width: 100%; border-collapse: collapse; font-size: 10px; }
+  .summary-table th { padding: 3px 5px; text-align: left; color: #6a7a8a; font-weight: 700; font-size: 9px; white-space: nowrap; border-bottom: 2px solid #e0e8f0; }
+  .summary-table td { padding: 4px 5px; border-bottom: 1px solid #f0f4f8; vertical-align: top; }
+  .summary-table tr:nth-child(even) td { background: #fafcfe; }
+  .batch-section { margin-top: 9px; padding-top: 9px; border-top: 2px solid #e0e8f0; }
+  .batch-label { font-size: 9px; font-weight: 700; color: #6a7a8a; text-transform: uppercase; margin-bottom: 5px; }
+  .batch-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+  .batch-chip { border-radius: 5px; padding: 5px 8px; }
+  .status-warn { margin-top: 7px; font-size: 10px; color: #8a6a1a; background: #fef8e8; border-radius: 5px; padding: 5px 9px; }
+  .status-ok { margin-top: 7px; font-size: 10px; color: #1a5a2a; background: #e8f4e8; border-radius: 5px; padding: 5px 9px; font-weight: 600; }
+
+  .btn-copy { width: 100%; padding: 11px; background: #0d2a3e; color: #fff; border: none; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; margin-bottom: 7px; }
+
+  .settings { margin-top: 10px; display: flex; flex-direction: column; gap: 5px; }
+  .settings-toggle { padding: 8px 12px; background: transparent; border: 1px dashed #a0b0c0; border-radius: 7px; color: #6a7a8a; font-size: 11px; cursor: pointer; text-align: left; width: 100%; }
+  .settings-panel { background: #fff; border-radius: 9px; padding: 11px; margin-bottom: 2px; }
+  .settings-hint { font-size: 10px; color: #6a7a8a; margin-bottom: 7px; }
+  .settings-grid-hdr { display: grid; grid-template-columns: 24px 1fr 1fr 1fr; gap: 5px; margin-bottom: 4px; }
+  .settings-grid-hdr span { font-size: 9px; font-weight: 700; color: #8a95a0; }
+  .roster-row { display: grid; grid-template-columns: 24px 1fr 1fr 1fr 22px; gap: 5px; align-items: center; padding: 4px 0; border-bottom: 1px solid #f0f4f8; }
+  .roster-idx { font-size: 10px; color: #8a95a0; font-family: monospace; text-align: right; }
+  .btn-roster-del { width: 22px; height: 22px; padding: 0; background: #fee8e8; border: none; border-radius: 4px; color: #aa2a2a; font-size: 13px; cursor: pointer; font-weight: 700; line-height: 22px; text-align: center; flex-shrink: 0; }
+  .btn-roster-add { width: 100%; padding: 7px; background: #f0f8ff; border: 1px dashed #a0b8d0; border-radius: 6px; color: #1a6fa8; font-size: 11px; cursor: pointer; margin-top: 6px; margin-bottom: 4px; font-weight: 600; }
+
+  /* Copy-to-days overlay */
+  .copy-overlay { position: fixed; inset: 0; background: rgba(13,42,62,0.88); z-index: 1500; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .copy-card { background: #fff; border-radius: 14px; padding: 20px; max-width: 340px; width: 100%; }
+  .copy-title { font-size: 15px; font-weight: 800; color: #0d2a3e; margin-bottom: 4px; }
+  .copy-sub { font-size: 11px; color: #6a7a8a; margin-bottom: 14px; line-height: 1.4; }
+  .copy-day-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-bottom: 14px; }
+  .copy-day-btn { padding: 10px 6px; border: 2px solid #dde3ea; border-radius: 8px; background: #f8fafc; color: #4a6070; font-size: 12px; font-weight: 600; cursor: pointer; text-align: center; }
+  .copy-day-btn.sel { border-color: #1a6fa8; background: #1a6fa8; color: #fff; }
+  .copy-day-btn.source { border-color: #8a95a0; background: #e8ecf0; color: #8a95a0; cursor: default; font-style: italic; }
+  .copy-options { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+  .copy-option { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid #e0e8f0; border-radius: 7px; cursor: pointer; }
+  .copy-option input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; accent-color: #1a6fa8; }
+  .copy-option-label { font-size: 11px; color: #2a3540; font-weight: 600; }
+  .copy-option-sub { font-size: 10px; color: #8a95a0; }
+  input { padding: 5px 7px; border: 1px solid #dde3ea; border-radius: 5px; font-size: 11px; width: 100%; font-family: inherit; }
+  .settings-btns { display: flex; gap: 7px; margin-top: 9px; }
+  .btn-save { flex: 2; padding: 8px; background: #0d2a3e; color: #fff; border: none; border-radius: 6px; font-weight: 700; font-size: 11px; cursor: pointer; }
+  .btn-cancel { flex: 1; padding: 8px; background: #f0f4f8; color: #4a6070; border: none; border-radius: 6px; font-weight: 600; font-size: 11px; cursor: pointer; }
+  .diag-row { display: flex; gap: 5px; margin-bottom: 5px; align-items: center; }
+  .diag-row input.code-input { width: 80px; flex-shrink: 0; }
+  .diag-row input.desc-input { flex: 1; }
+  .btn-del { padding: 4px 7px; background: #fee8e8; border: none; border-radius: 5px; color: #aa2a2a; font-size: 11px; cursor: pointer; font-weight: 700; }
+  .btn-add { width: 100%; padding: 6px; background: #f0f8ff; border: 1px dashed #a0b8d0; border-radius: 5px; color: #1a6fa8; font-size: 11px; cursor: pointer; margin-bottom: 8px; font-weight: 600; }
+  .vc-edit-row { margin-bottom: 8px; padding-bottom: 8px; }
+  .vc-edit-row:not(:last-child) { border-bottom: 1px solid #f0f4f8; }
+  .vc-edit-label { font-size: 10px; font-weight: 700; margin-bottom: 4px; }
+  .vc-edit-inputs { display: flex; gap: 6px; }
+
+
+  /* VC picker per patient */
+  .vc-select-btn { width:56px; flex-shrink:0; padding:5px 3px; border-radius:5px; font-size:11px; font-weight:700; cursor:pointer; border:2px solid #dde3ea; background:#f8fafc; color:#6b7a8a; text-align:center; line-height:1.2; }
+  .vc-select-btn.has-code { color:#fff; }
+  .vc-group-label { font-size:9px; font-weight:700; color:#8a95a0; text-transform:uppercase; letter-spacing:0.08em; margin:5px 0 3px; padding-top:4px; border-top:1px solid #e8ecf0; }
+  .vc-group-label:first-child { border-top:none; margin-top:0; }
+  .picker-btn-vc { padding:5px 7px; border-radius:5px; font-size:10px; cursor:pointer; font-weight:600; background:#fff; border:1.5px solid #c0ccd8; color:#4a5a6a; text-align:left; }
+  .picker-btn-vc .vc-code { font-size:11px; font-weight:800; display:block; }
+  .picker-btn-vc .vc-desc { font-size:8px; opacity:0.8; display:block; margin-top:1px; line-height:1.2; }
+  .picker-btn-vc.sel { color:#fff; }
+  /* Date section */
+  .date-section { background:#fff; border-radius:8px; padding:7px 10px; margin-bottom:9px; display:flex; align-items:center; gap:8px; }
+  .date-section-label { font-size:10px; font-weight:700; color:#4a6070; flex-shrink:0; min-width:72px; }
+  .date-section input { flex:1; border:1.5px solid #dde3ea; border-radius:6px; font-size:15px; padding:5px 8px; font-family:inherit; color:#0d2a3e; font-weight:600; background:#f8fafc; }
+  .date-section .fill-btn { padding:5px 9px; background:#f0f8ff; border:1px solid #b0d0e8; border-radius:6px; font-size:10px; color:#1a6fa8; font-weight:600; cursor:pointer; white-space:nowrap; flex-shrink:0; }
+  .day-tab-date { display:block; font-size:7px; font-weight:400; opacity:0.75; margin-top:1px; }
+
+  .empty-state { background: #fff; border-radius: 10px; padding: 24px; text-align: center; color: #8a95a0; font-size: 13px; }
+
+  .save-banner { position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); background: #0d2a3e; color: #7ec8e3; font-size: 11px; font-weight: 600; padding: 7px 16px; border-radius: 20px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; }
+  .save-banner.show { opacity: 1; }
+
+  /* Sync overlay */
+  .sync-overlay { position: fixed; inset: 0; background: rgba(13,42,62,0.92); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .sync-card { background: #fff; border-radius: 14px; padding: 24px; max-width: 340px; width: 100%; }
+  .sync-title { font-size: 16px; font-weight: 800; color: #0d2a3e; margin-bottom: 4px; }
+  .sync-sub { font-size: 11px; color: #6a7a8a; margin-bottom: 18px; line-height: 1.4; }
+  .sync-label { font-size: 10px; font-weight: 700; color: #4a6070; text-transform: uppercase; margin-bottom: 4px; }
+  .sync-input { width: 100%; padding: 10px 12px; border: 2px solid #dde3ea; border-radius: 8px; font-size: 18px; letter-spacing: 0.2em; text-align: center; font-family: monospace; font-weight: 700; color: #0d2a3e; margin-bottom: 12px; }
+  .sync-input:focus { outline: none; border-color: #1a6fa8; }
+  .sync-btns { display: flex; gap: 8px; }
+  .sync-btn-primary { flex: 2; padding: 11px; background: #0d2a3e; color: #fff; border: none; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; }
+  .sync-btn-secondary { flex: 1; padding: 11px; background: #f0f4f8; color: #4a6070; border: none; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; }
+  .sync-status { font-size: 11px; text-align: center; margin-top: 10px; min-height: 16px; }
+  .sync-status.err { color: #aa2a2a; }
+  .sync-status.ok { color: #1a5a2a; }
+  .sync-divider { border: none; border-top: 1px solid #e8ecf0; margin: 14px 0; }
+  .sync-bar { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: #f0f8ff; border-radius: 8px; margin-bottom: 8px; font-size: 11px; }
+  .sync-bar-id { font-family: monospace; font-weight: 700; color: #1a6fa8; letter-spacing: 0.1em; }
+  .sync-bar-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .sync-bar-dot.online { background: #2a7a5a; }
+  .sync-bar-dot.offline { background: #8a95a0; }
+  .sync-bar-btn { margin-left: auto; padding: 3px 8px; background: #1a6fa8; color: #fff; border: none; border-radius: 5px; font-size: 10px; font-weight: 600; cursor: pointer; }
+  .sync-bar-push { padding: 3px 8px; background: #2a7a5a; color: #fff; border: none; border-radius: 5px; font-size: 10px; font-weight: 600; cursor: pointer; margin-right: 4px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="save-banner" id="saveBanner">✓ Saved</div>
+<div class="sync-overlay" id="syncOverlay" style="display:none"></div>
+
+<script>
+// ── Data ───────────────────────────────────────────────────────────────────
+const ADHOC_CODES = [
+  // Delivery / Admission add-ons
+  { id:"AD01", label:"Attend Delivery",          ohip:"H267",  color:"#b94a1a" },
+  { id:"AD02", label:"NICU Admit (Mid–7am)",     ohip:"G556",  color:"#b94a1a" },
+  // Therapies / Monitoring
+  { id:"AD03", label:"T. Hypothermia",           ohip:"G210",  color:"#1a6fa8" },
+  { id:"AD04", label:"EEG (≤24 hr)",             ohip:"G554",  color:"#1a6fa8" },
+  { id:"AD04B",label:"EEG (>24 hr)",             ohip:"G555",  color:"#1a6fa8" },
+  // Family / Meetings
+  { id:"AD05", label:"Family Meeting",           ohip:"K002",  color:"#7a4a0a" },
+  { id:"AD06", label:"Case Conference",          ohip:"K121",  color:"#7a4a0a" },
+  { id:"AD07", label:"CAS Meeting",              ohip:"K003",  color:"#7a4a0a" },
+  // Consults
+  { id:"AD08", label:"Criti-call Consult",       ohip:"K732",  color:"#6a4a9a" },
+  { id:"AD09", label:"Consult (ref. MD req.)",   ohip:"C265",  color:"#6a4a9a" },
+  // Procedures
+  { id:"AD10", label:"Lumbar Puncture",          ohip:"Z804",  color:"#1a7a5a" },
+  { id:"AD11", label:"Needle Thoracotomy",       ohip:"Z332",  color:"#1a7a5a" },
+  { id:"AD12", label:"Chest Tube",               ohip:"Z341",  color:"#1a7a5a" },
+  { id:"AD13", label:"Exchange Transfusion",     ohip:"G275",  color:"#1a7a5a" },
+  { id:"AD14", label:"UVC",                      ohip:"G282",  color:"#1a7a5a" },
+  { id:"AD15", label:"UAC",                      ohip:"G309",  color:"#1a7a5a" },
+  { id:"AD16", label:"PICC",                     ohip:"Z465",  color:"#1a7a5a" },
+  { id:"AD17", label:"Intubation",               ohip:"G211",  color:"#1a7a5a" },
+  { id:"AD18", label:"Paracentesis",             ohip:"Z591",  color:"#1a7a5a" },
+];
+
+const DAYS     = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const DAY_SHORT= ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+
+const PHYSICIAN = {
+  name:   "Dr. Sajit Augustine",
+  ohip:   "040133",
+  site:   "Windsor NICU",
+};
+
+// Parse an ISO date string (YYYY-MM-DD) in LOCAL time — avoids UTC-midnight off-by-one bug
+function parseLocalDate(iso) {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+// Format a local Date as YYYY-MM-DD
+function toISODate(d) {
+  return d.getFullYear() + "-" +
+    String(d.getMonth() + 1).padStart(2, "0") + "-" +
+    String(d.getDate()).padStart(2, "0");
+}
+// Return Sunday-anchored ISO week dates for the week containing a given date
+function getWeekDates(anchorDate) {
+  const d = anchorDate ? parseLocalDate(anchorDate) : new Date();
+  const dayOfWeek = d.getDay(); // 0 = Sunday
+  const sunY = d.getFullYear(), sunM = d.getMonth(), sunD = d.getDate() - dayOfWeek;
+  return Object.fromEntries(DAYS.map((name, i) => {
+    return [name, toISODate(new Date(sunY, sunM, sunD + i))];
+  }));
+}
+
+function formatDisplayDate(iso) {
+  if (!iso) return "";
+  const [y, m, dd] = iso.split("-");
+  return `${dd}/${m}/${y}`;
+}
+
+const DEFAULT_VC = [
+  // ── Level A ─────────────────────────────────────────────────────
+  { id:"VA1", label:"G604", description:"Level A day 1 (<750g/<26w)", color:"#7a2a6a", group:"Level A" },
+  { id:"VA2", label:"G600", description:"NICU Admit Level A",          color:"#7a2a6a", group:"Level A" },
+  { id:"VA3", label:"G601", description:"Level A day 2 onward",        color:"#7a2a6a", group:"Level A" },
+  { id:"VA4", label:"C263", description:"Level A day 1 (other MD)",    color:"#9a7a1a", group:"Level A" },
+  // ── Level B ─────────────────────────────────────────────────────
+  { id:"VB1", label:"G610", description:"NICU Admit Level B",          color:"#1a6fa8", group:"Level B" },
+  { id:"VB2", label:"G611", description:"Level B day 2 onward",        color:"#1a6fa8", group:"Level B" },
+  { id:"VB3", label:"C263", description:"Level B day 1 (other MD)",    color:"#9a7a1a", group:"Level B" },
+  // ── Level C ─────────────────────────────────────────────────────
+  { id:"VC1", label:"G620", description:"NICU Admit Level C",          color:"#2a7a5a", group:"Level C" },
+  { id:"VC2", label:"G621", description:"Level C day 2 onward",        color:"#2a7a5a", group:"Level C" },
+  { id:"VC3", label:"C263", description:"Level C day 1 (other MD)",    color:"#9a7a1a", group:"Level C" },
+  // ── Critical Care ────────────────────────────────────────────────
+  { id:"VX1", label:"G521", description:"Critical Care",               color:"#aa2a2a", group:"Critical" },
+  { id:"VX2", label:"G522", description:"Critical Care",               color:"#aa2a2a", group:"Critical" },
+  { id:"VX3", label:"G523", description:"Critical Care",               color:"#aa2a2a", group:"Critical" },
+  // ── Other ────────────────────────────────────────────────────────
+  { id:"VY1", label:"C263", description:"Specific Medical Assessment", color:"#4a5a6a", group:"Other" },
+  { id:"VY2", label:"C777", description:"Pronounce Death",             color:"#3a3a3a", group:"Other" },
+];
+const DEFAULT_DIAG = [
+  { id:"DX01", label:"765",  description:"Prematurity" },
+  { id:"DX02", label:"765",  description:"IUGR" },
+  { id:"DX03", label:"765",  description:"RDS" },
+  { id:"DX04", label:"770",  description:"Other Respiratory Dx" },
+  { id:"DX05", label:"773",  description:"Hemolytic Jaundice" },
+  { id:"DX06", label:"787",  description:"Non-hemolytic Jaundice" },
+  { id:"DX07", label:"775",  description:"Endocrine / Metabolic" },
+  { id:"DX08", label:"436",  description:"HIE" },
+  { id:"DX09", label:"766",  description:"LGA" },
+  { id:"DX10", label:"426",  description:"Cardiac Issue / Murmur" },
+  { id:"DX11", label:"427",  description:"Arrhythmia" },
+  { id:"DX12", label:"758",  description:"Chromosomal Anomalies" },
+  { id:"DX13", label:"767",  description:"Birth Trauma" },
+  { id:"DX14", label:"749",  description:"Cleft Lip / Palate" },
+  { id:"DX15", label:"741",  description:"Neural Tube Defect" },
+];
+
+const makePatientData = () => ({ visitCode: null, adhoc: [], diag: [] });
+const makeDay = (n) => Array(n||25).fill(null).map(makePatientData);
+const makeRoster = (n) => Array(n||25).fill(null).map(()=>({ name:"", hcn:"", dob:"" }));
+
+// ── Cloud Sync (JSONBin.io – free, no login) ───────────────────────────────
+// Uses a public JSONBin bin keyed by a user-chosen 6-char PIN.
+// Each PIN maps to a unique bin. Data is readable/writable by anyone with the PIN.
+// Suitable for personal medical billing tally — not PHI storage.
+
+const JSONBIN_API = "https://api.jsonbin.io/v3";
+// Free API key — read/write public bins only
+const JSONBIN_KEY = "$2a$10$placeholder_replace_if_needed"; // not required for public bins
+
+let syncId = localStorage.getItem("nicu_sync_id") || null;       // jsonbin bin ID
+let syncPin = localStorage.getItem("nicu_sync_pin") || null;      // user's PIN
+let syncOnline = false;
+
+function pinToBinName(pin) { return "nicu-billing-" + pin.toUpperCase(); }
+
+// Try to find a bin by PIN (search not available on free tier, so we store bin ID locally)
+async function cloudGet() {
+  if (!syncId) return null;
+  try {
+    const r = await fetch(`${JSONBIN_API}/b/${syncId}/latest`, {
+      headers: { "X-Access-Key": JSONBIN_KEY }
+    });
+    if (!r.ok) return null;
+    const j = await r.json();
+    return j.record || null;
+  } catch(e) { return null; }
+}
+
+async function cloudSet(data) {
+  if (!syncId) return false;
+  try {
+    const r = await fetch(`${JSONBIN_API}/b/${syncId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", "X-Access-Key": JSONBIN_KEY },
+      body: JSON.stringify(data)
+    });
+    return r.ok;
+  } catch(e) { return false; }
+}
+
+async function cloudCreate(data) {
+  try {
+    const r = await fetch(`${JSONBIN_API}/b`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Access-Key": JSONBIN_KEY,
+        "X-Bin-Name": pinToBinName(syncPin),
+        "X-Bin-Private": "false"
+      },
+      body: JSON.stringify(data)
+    });
+    if (!r.ok) return null;
+    const j = await r.json();
+    return j.metadata?.id || null;
+  } catch(e) { return null; }
+}
+
+// ── IndexedDB (automatic local history, keyed by real calendar date) ──────
+// This is separate from the localStorage "current week" cache above — it
+// keeps a permanent per-date snapshot so past weeks aren't lost when new
+// dates get assigned to the Sun–Sat tabs.
+const IDB_NAME    = "nicuBillingDB";
+const IDB_VERSION = 1;
+const IDB_STORE   = "dayRecords";
+let idbDB = null;
+
+function openIDB() {
+  return new Promise((resolve, reject) => {
+    if (idbDB) return resolve(idbDB);
+    if (!window.indexedDB) return reject(new Error("IndexedDB not supported"));
+    const req = indexedDB.open(IDB_NAME, IDB_VERSION);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(IDB_STORE)) {
+        db.createObjectStore(IDB_STORE, { keyPath: "date" }); // date = "YYYY-MM-DD"
+      }
+    };
+    req.onsuccess = (e) => { idbDB = e.target.result; resolve(idbDB); };
+    req.onerror   = (e) => reject(e.target.error);
+  });
+}
+
+async function idbPutDayRecord(record) {
+  try {
+    const db = await openIDB();
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, "readwrite");
+      tx.objectStore(IDB_STORE).put(record);
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = (e) => reject(e.target.error);
+    });
+  } catch (e) { console.error("IndexedDB save failed:", e); return false; }
+}
+
+async function idbDeleteDayRecord(date) {
+  try {
+    const db = await openIDB();
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, "readwrite");
+      tx.objectStore(IDB_STORE).delete(date);
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = (e) => reject(e.target.error);
+    });
+  } catch (e) { console.error("IndexedDB delete failed:", e); return false; }
+}
+
+async function idbGetAllDayRecords() {
+  try {
+    const db = await openIDB();
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, "readonly");
+      const req = tx.objectStore(IDB_STORE).getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = (e) => reject(e.target.error);
+    });
+  } catch (e) { console.error("IndexedDB read failed:", e); return []; }
+}
+
+// Build a snapshot for one Sun–Sat tab, if it has a real calendar date assigned.
+function buildDayRecord(dayName) {
+  const iso = state.weekDates && state.weekDates[dayName];
+  if (!iso) return null;
+  const patients = state.weekData[dayName];
+  if (!patients) return null;
+  const rows = patients.map((p, i) => {
+    const pat = state.roster[i] || { name:"", hcn:"", dob:"" };
+    const vc  = state.visitCodes.find(c => c.id === p.visitCode);
+    const ads = (state.customAdhoc || ADHOC_CODES).filter(a => p.adhoc.includes(a.id));
+    const dgs = state.diagCodes.filter(d => p.diag.includes(d.id));
+    return {
+      name: pat.name || "", hcn: pat.hcn || "", dob: pat.dob || "",
+      visit: vc ? { code: vc.label, desc: vc.description } : null,
+      adhoc: ads.map(a => ({ label: a.label, ohip: a.ohip })),
+      diag:  dgs.map(d => ({ label: d.label, desc: d.description })),
+    };
+  });
+  const hasData = rows.some(r => r.visit || r.adhoc.length || r.diag.length);
+  if (!hasData) return null;
+  return {
+    date: iso,
+    dayName,
+    physician: PHYSICIAN.name,
+    ohip: PHYSICIAN.ohip,
+    site: PHYSICIAN.site,
+    savedAt: Date.now(),
+    filled: patients.filter(p => p.visitCode).length,
+    total: patients.length,
+    patients: rows,
+  };
+}
+
+// Called automatically on every save — pushes each dated tab's snapshot into
+// IndexedDB (or removes it if it was cleared out), so history persists
+// across weeks without any manual action.
+async function syncHistoryToIDB() {
+  for (const d of DAYS) {
+    const iso = state.weekDates && state.weekDates[d];
+    if (!iso) continue;
+    const rec = buildDayRecord(d);
+    if (rec) await idbPutDayRecord(rec);
+    else await idbDeleteDayRecord(iso);
+  }
+}
+
+// ── State ──────────────────────────────────────────────────────────────────
+function loadLocalState() {
+  try {
+    const s = localStorage.getItem("nicu_billing_v3");
+    if (s) return JSON.parse(s);
+  } catch(e){}
+  return null;
+}
+
+function defaultState() {
+  const today = new Date().toLocaleDateString("en-CA", { weekday:"long" });
+  return {
+    selectedDay: DAYS.includes(today) ? today : "Monday",
+    view: "billing",
+    section: null,
+    rosterSize: 25,
+    visitCodes: DEFAULT_VC,
+    diagCodes: DEFAULT_DIAG,
+    roster: makeRoster(25),
+    weekData: Object.fromEntries(DAYS.map(d=>[d, makeDay(25)])),
+    weekDates: getWeekDates(),
+    showAdhoc: null,
+    showDiag: null,
+    showVC: null,
+    draftVC: DEFAULT_VC,
+    draftDiag: DEFAULT_DIAG,
+    draftRoster: makeRoster(),
+  };
+}
+
+function mergeState(saved, def) {
+  if (!saved) return def;
+  return {
+    ...def,
+    ...saved,
+    showAdhoc: null,
+    showDiag: null,
+    showVC: null,
+    section: null,
+    weekDates: saved.weekDates || getWeekDates(),
+    draftVC: saved.visitCodes || def.visitCodes,
+    draftDiag: saved.diagCodes || def.diagCodes,
+    draftRoster: saved.roster ? saved.roster.map(p=>({...p})) : def.roster,
+  };
+}
+
+let state = mergeState(loadLocalState(), defaultState());
+
+function getSerializableState() {
+  const { draftVC, draftDiag, draftRoster, showAdhoc, showDiag, showVC, section, ...toSave } = state;
+  return toSave;
+}
+
+function saveState() {
+  try {
+    localStorage.setItem("nicu_billing_v3", JSON.stringify(getSerializableState()));
+    showSaveBanner("✓ Saved locally");
+  } catch(e){}
+  // Fire-and-forget: snapshot every dated day into IndexedDB for permanent history.
+  syncHistoryToIDB().catch(e => console.error("History sync failed:", e));
+}
+
+async function pushToCloud() {
+  if (!syncId) return;
+  showSaveBanner("↑ Syncing...");
+  const ok = await cloudSet(getSerializableState());
+  showSaveBanner(ok ? "☁ Synced" : "⚠ Sync failed");
+}
+
+function showSaveBanner(msg) {
+  const b = document.getElementById("saveBanner");
+  b.textContent = msg || "✓ Saved";
+  b.classList.add("show");
+  setTimeout(()=>b.classList.remove("show"), 2000);
+}
+
+// ── Sync overlay UI ────────────────────────────────────────────────────────
+function showSyncOverlay() {
+  const overlay = document.getElementById("syncOverlay");
+  overlay.style.display = "flex";
+  overlay.innerHTML = "";
+
+  const card = document.createElement("div");
+  card.className = "sync-card";
+
+  const title = document.createElement("div");
+  title.className = "sync-title";
+  title.textContent = syncPin ? "☁ Cloud Sync" : "Connect Any Device";
+  card.appendChild(title);
+
+  const sub = document.createElement("div");
+  sub.className = "sync-sub";
+  sub.textContent = syncPin
+    ? `Your sync PIN is active. Open this file on any device and enter the same PIN to share data.`
+    : `Choose a 6-character PIN to sync this app across your iPhone, iPad, and computer. Anyone with your PIN can access the data.`;
+  card.appendChild(sub);
+
+  if (syncPin) {
+    // Show current PIN and options
+    const pinLabel = document.createElement("div");
+    pinLabel.className = "sync-label"; pinLabel.textContent = "Your PIN";
+    card.appendChild(pinLabel);
+
+    const pinDisplay = document.createElement("input");
+    pinDisplay.className = "sync-input";
+    pinDisplay.value = syncPin;
+    pinDisplay.readOnly = true;
+    card.appendChild(pinDisplay);
+
+    const statusEl = document.createElement("div");
+    statusEl.className = "sync-status";
+    card.appendChild(statusEl);
+
+    const btns = document.createElement("div");
+    btns.className = "sync-btns";
+
+    const pushBtn = document.createElement("button");
+    pushBtn.className = "sync-btn-primary";
+    pushBtn.textContent = "↑ Push to Cloud";
+    pushBtn.onclick = async () => {
+      statusEl.textContent = "Uploading…"; statusEl.className = "sync-status";
+      const ok = await cloudSet(getSerializableState());
+      statusEl.textContent = ok ? "✓ Uploaded successfully" : "✗ Upload failed — check connection";
+      statusEl.className = ok ? "sync-status ok" : "sync-status err";
+    };
+
+    const pullBtn = document.createElement("button");
+    pullBtn.className = "sync-btn-secondary";
+    pullBtn.textContent = "↓ Pull from Cloud";
+    pullBtn.onclick = async () => {
+      statusEl.textContent = "Downloading…"; statusEl.className = "sync-status";
+      const remote = await cloudGet();
+      if (remote) {
+        state = mergeState(remote, defaultState());
+        localStorage.setItem("nicu_billing_v3", JSON.stringify(remote));
+        statusEl.textContent = "✓ Data loaded from cloud";
+        statusEl.className = "sync-status ok";
+        setTimeout(()=>{ hideSyncOverlay(); render(); }, 1000);
+      } else {
+        statusEl.textContent = "✗ No data found — push from another device first";
+        statusEl.className = "sync-status err";
+      }
+    };
+
+    btns.appendChild(pushBtn); btns.appendChild(pullBtn);
+    card.appendChild(btns);
+
+    const hr = document.createElement("hr"); hr.className = "sync-divider";
+    card.appendChild(hr);
+
+    const changeBtn = document.createElement("button");
+    changeBtn.className = "sync-btn-secondary";
+    changeBtn.style.width = "100%";
+    changeBtn.textContent = "Change PIN / Connect different device";
+    changeBtn.onclick = () => { syncPin = null; syncId = null; localStorage.removeItem("nicu_sync_pin"); localStorage.removeItem("nicu_sync_id"); showSyncOverlay(); };
+    card.appendChild(changeBtn);
+
+  } else {
+    // PIN entry
+    const pinLabel = document.createElement("div");
+    pinLabel.className = "sync-label"; pinLabel.textContent = "Enter or create a PIN (letters & numbers)";
+    card.appendChild(pinLabel);
+
+    const pinInput = document.createElement("input");
+    pinInput.className = "sync-input";
+    pinInput.placeholder = "ABC123";
+    pinInput.maxLength = 6;
+    pinInput.autocomplete = "off";
+    pinInput.oninput = e => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,""); };
+    card.appendChild(pinInput);
+
+    const statusEl = document.createElement("div");
+    statusEl.className = "sync-status";
+    card.appendChild(statusEl);
+
+    const btns = document.createElement("div");
+    btns.className = "sync-btns";
+
+    // NEW: create a new bin with this PIN, push local data
+    const createBtn = document.createElement("button");
+    createBtn.className = "sync-btn-primary";
+    createBtn.textContent = "Create / Connect";
+    createBtn.onclick = async () => {
+      const pin = pinInput.value.trim();
+      if (pin.length < 4) { statusEl.textContent = "Enter at least 4 characters"; statusEl.className = "sync-status err"; return; }
+      syncPin = pin;
+      statusEl.textContent = "Connecting…"; statusEl.className = "sync-status";
+      // Try to use stored bin ID for this PIN first
+      const stored = localStorage.getItem("nicu_bin_" + pin);
+      if (stored) {
+        syncId = stored;
+        localStorage.setItem("nicu_sync_id", syncId);
+        localStorage.setItem("nicu_sync_pin", pin);
+        // Try pull
+        const remote = await cloudGet();
+        if (remote) {
+          state = mergeState(remote, defaultState());
+          localStorage.setItem("nicu_billing_v3", JSON.stringify(remote));
+          statusEl.textContent = "✓ Loaded from cloud";
+          statusEl.className = "sync-status ok";
+          setTimeout(()=>{ hideSyncOverlay(); render(); }, 800);
+        } else {
+          await cloudSet(getSerializableState());
+          statusEl.textContent = "✓ Connected & pushed";
+          statusEl.className = "sync-status ok";
+          setTimeout(()=>{ hideSyncOverlay(); render(); }, 800);
+        }
+      } else {
+        // Create new bin
+        const newId = await cloudCreate(getSerializableState());
+        if (newId) {
+          syncId = newId;
+          localStorage.setItem("nicu_sync_id", syncId);
+          localStorage.setItem("nicu_sync_pin", pin);
+          localStorage.setItem("nicu_bin_" + pin, newId);
+          statusEl.textContent = "✓ Cloud sync active! Use this PIN on other devices.";
+          statusEl.className = "sync-status ok";
+          setTimeout(()=>{ hideSyncOverlay(); render(); }, 1200);
+        } else {
+          // Offline mode — save PIN for later
+          localStorage.setItem("nicu_sync_pin", pin);
+          syncId = null;
+          statusEl.textContent = "⚠ Offline — PIN saved. Sync when connected.";
+          statusEl.className = "sync-status err";
+          setTimeout(()=>{ hideSyncOverlay(); render(); }, 1500);
+        }
+      }
+    };
+
+    const skipBtn = document.createElement("button");
+    skipBtn.className = "sync-btn-secondary";
+    skipBtn.textContent = "Skip";
+    skipBtn.onclick = hideSyncOverlay;
+
+    btns.appendChild(createBtn); btns.appendChild(skipBtn);
+    card.appendChild(btns);
+
+    const hint = document.createElement("div");
+    hint.style.cssText = "font-size:10px;color:#8a95a0;margin-top:12px;line-height:1.5;";
+    hint.textContent = "On a second device: open this same HTML file, tap ☁ Sync, and enter the same PIN. Your roster and weekly data will load automatically.";
+    card.appendChild(hint);
+  }
+
+  overlay.appendChild(card);
+}
+
+function hideSyncOverlay() {
+  document.getElementById("syncOverlay").style.display = "none";
+}
+
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function el(tag, cls, ...children) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  children.forEach(c => { if (c !== null && c !== undefined) { if (typeof c === "string") e.appendChild(document.createTextNode(c)); else e.appendChild(c); }});
+  return e;
+}
+function div(cls, ...children) { return el("div", cls, ...children); }
+function btn(cls, text, onClick) { const b = el("button", cls, text); b.onclick = onClick; return b; }
+function inp(val, placeholder, onChange, extraStyle) {
+  const i = document.createElement("input");
+  i.value = val; i.placeholder = placeholder;
+  if (extraStyle) i.style.cssText = extraStyle;
+  i.oninput = e => onChange(e.target.value);
+  return i;
+}
+function pillEl(text, color) {
+  const s = el("span","pill", text);
+  s.style.background = color;
+  return s;
+}
+
+function getDayPatients() { return state.weekData[state.selectedDay]; }
+
+function weekBilled() {
+  return Object.values(state.weekData).reduce((n,day)=>n+day.filter(p=>p.visitCode).length,0);
+}
+
+function dayFilled(day) {
+  return state.weekData[day].filter(p=>p.visitCode).length;
+}
+
+function dayHasData(day) {
+  return state.weekData[day].some(p=>p.visitCode||p.adhoc.length||p.diag.length);
+}
+
+function vcCounts() {
+  const pts = getDayPatients();
+  return Object.fromEntries(state.visitCodes.map(c=>[c.id, pts.filter(p=>p.visitCode===c.id).length]));
+}
+
+function adhocTally() {
+  const pts = getDayPatients();
+  const codes = state.customAdhoc || ADHOC_CODES;
+  return codes.map(a=>({...a, count: pts.reduce((n,p)=>n+(p.adhoc.includes(a.id)?1:0),0)})).filter(a=>a.count>0);
+}
+
+// ── Mutations ──────────────────────────────────────────────────────────────
+function setVisit(pi, codeId) {
+  state.weekData[state.selectedDay][pi].visitCode = codeId;
+  state.showVC = null;
+  saveState(); render();
+}
+function toggleAdhoc(pi, aid) {
+  const arr = state.weekData[state.selectedDay][pi].adhoc;
+  const idx = arr.indexOf(aid);
+  if (idx>=0) arr.splice(idx,1); else arr.push(aid);
+  saveState(); render();
+}
+function toggleDiag(pi, did) {
+  const arr = state.weekData[state.selectedDay][pi].diag;
+  const idx = arr.indexOf(did);
+  if (idx>=0) arr.splice(idx,1); else arr.push(did);
+  saveState(); render();
+}
+function clearDay() {
+  state.weekData[state.selectedDay] = makeDay();
+  state.showAdhoc = null; state.showDiag = null; state.showVC = null;
+  saveState(); render();
+}
+
+// ── Copy JCL ──────────────────────────────────────────────────────────────
+function copyJCL() {
+  const pts = getDayPatients();
+  const dayDate = state.weekDates ? state.weekDates[state.selectedDay] : null;
+  const dateStr = dayDate ? formatDisplayDate(dayDate) : new Date().toLocaleDateString("en-CA");
+  const col = (s,w) => String(s||"").padEnd(w).slice(0,w);
+  const rows = pts.map((p,i)=>{
+    const pat = state.roster[i];
+    const vc  = state.visitCodes.find(c=>c.id===p.visitCode);
+    const ads = (state.customAdhoc || ADHOC_CODES).filter(a=>p.adhoc.includes(a.id));
+    const dgs = state.diagCodes.filter(d=>p.diag.includes(d.id));
+    if (!vc && ads.length===0 && dgs.length===0) return null;
+    return {
+      num: String(i+1).padStart(2,"0"),
+      name: pat.name || `Patient ${i+1}`,
+      hcn: pat.hcn || "—",
+      dob: pat.dob || "—",
+      visit: vc ? `${vc.label} (${vc.description})` : "—",
+      adhoc: ads.map(a=>`${a.label}[${a.ohip}]`).join(", ") || "—",
+      diag:  dgs.map(d=>`${d.label} ${d.description}`).join(", ") || "—",
+    };
+  }).filter(Boolean);
+
+  const filled = pts.filter(p=>p.visitCode).length;
+  const counts = vcCounts();
+  const tally  = adhocTally();
+  const lines = [
+    `JCL BILLING SHEET — ${state.selectedDay} ${dateStr}`,
+    `Physician: ${PHYSICIAN.name}   OHIP#: ${PHYSICIAN.ohip}`,
+    `Hospital: ${PHYSICIAN.site}`,
+    "",
+    `${col("#",4)}${col("Name",22)}${col("HCN",14)}${col("DOB",12)}${col("Visit Code",28)}${col("Procedures",36)}Diagnosis`,
+    "─".repeat(120),
+    ...rows.map(r=>`${col(r.num,4)}${col(r.name,22)}${col(r.hcn,14)}${col(r.dob,12)}${col(r.visit,28)}${col(r.adhoc,36)}${r.diag}`),
+    "─".repeat(120),
+    "",
+    "BATCH TOTALS — VISIT CODES:",
+    ...state.visitCodes.filter(c=>counts[c.id]>0).map(c=>`  ${c.label} (${c.description}): ${counts[c.id]}`),
+    "",
+    ...(tally.length>0 ? ["BATCH TOTALS — PROCEDURES:", ...tally.map(a=>`  ${a.label} [${a.ohip}]: ${a.count}`), ""] : []),
+    `Total visit claims: ${filled}/${state.roster.length}`,
+    filled<state.roster.length ? `⚠ Unbilled: ${state.roster.length-filled}` : "✓ All "+state.roster.length+" patients billed",
+  ].join("\n");
+
+  navigator.clipboard.writeText(lines).then(()=>{
+    showSaveBanner();
+  }).catch(()=>{
+    // fallback
+    const ta = document.createElement("textarea");
+    ta.value = lines; ta.style.position="fixed"; ta.style.opacity="0";
+    document.body.appendChild(ta); ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+  });
+}
+
+// ── Copy to Days overlay ───────────────────────────────────────────────────
+function showCopyOverlay() {
+  const sourceDay = state.selectedDay;
+  const sourceData = state.weekData[sourceDay];
+  let selectedDays = [];
+  let copyVisit = true;
+  let copyProc = true;
+  let copyDiag = false;
+
+  const overlay = document.createElement("div");
+  overlay.className = "copy-overlay";
+  overlay.id = "copyOverlay";
+
+  const card = document.createElement("div");
+  card.className = "copy-card";
+
+  const title = document.createElement("div");
+  title.className = "copy-title";
+  title.textContent = "Copy to Other Days";
+  card.appendChild(title);
+
+  const sub = document.createElement("div");
+  sub.className = "copy-sub";
+  const srcDate = state.weekDates ? state.weekDates[sourceDay] : null;
+  sub.textContent = `Copying from ${sourceDay}${srcDate ? " ("+formatDisplayDate(srcDate)+")" : ""}. Select target days and what to copy.`;
+  card.appendChild(sub);
+
+  // What to copy checkboxes
+  const optLabel = document.createElement("div");
+  optLabel.className = "sync-label"; optLabel.textContent = "What to copy";
+  card.appendChild(optLabel);
+  const opts = document.createElement("div");
+  opts.className = "copy-options";
+  const makeOpt = (label, sublabel, checked, onChange) => {
+    const row = document.createElement("div"); row.className = "copy-option";
+    row.onclick = () => { cb.checked = !cb.checked; onChange(cb.checked); };
+    const cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = checked;
+    cb.onclick = e => { e.stopPropagation(); onChange(cb.checked); };
+    const txt = document.createElement("div");
+    const l = document.createElement("div"); l.className = "copy-option-label"; l.textContent = label;
+    const s = document.createElement("div"); s.className = "copy-option-sub"; s.textContent = sublabel;
+    txt.appendChild(l); txt.appendChild(s);
+    row.appendChild(cb); row.appendChild(txt);
+    return row;
+  };
+  opts.appendChild(makeOpt("Visit Codes", "Primary care code per patient", true, v => copyVisit = v));
+  opts.appendChild(makeOpt("Procedures & Consults", "All ad-hoc codes per patient", true, v => copyProc = v));
+  opts.appendChild(makeOpt("Diagnostic Codes", "ICD-10 / Dx codes per patient", false, v => copyDiag = v));
+  card.appendChild(opts);
+
+  // Target day picker
+  const dayLabel = document.createElement("div");
+  dayLabel.className = "sync-label"; dayLabel.textContent = "Copy to which days";
+  card.appendChild(dayLabel);
+  const grid = document.createElement("div");
+  grid.className = "copy-day-grid";
+  const dayBtns = {};
+  DAYS.forEach(d => {
+    const b = document.createElement("button");
+    const dd = state.weekDates ? state.weekDates[d] : null;
+    b.className = d === sourceDay ? "copy-day-btn source" : "copy-day-btn";
+    b.textContent = d + (dd ? "\n" + formatDisplayDate(dd) : "");
+    b.style.whiteSpace = "pre";
+    if (d !== sourceDay) {
+      b.onclick = () => {
+        if (selectedDays.includes(d)) {
+          selectedDays = selectedDays.filter(x => x !== d);
+          b.className = "copy-day-btn";
+        } else {
+          selectedDays.push(d);
+          b.className = "copy-day-btn sel";
+        }
+      };
+    }
+    dayBtns[d] = b;
+    grid.appendChild(b);
+  });
+  card.appendChild(grid);
+
+  const status = document.createElement("div");
+  status.className = "sync-status";
+  card.appendChild(status);
+
+  const btns = document.createElement("div");
+  btns.className = "sync-btns";
+
+  const goBtn = document.createElement("button");
+  goBtn.className = "sync-btn-primary";
+  goBtn.textContent = "Copy";
+  goBtn.onclick = () => {
+    if (selectedDays.length === 0) {
+      status.textContent = "Select at least one target day.";
+      status.className = "sync-status err";
+      return;
+    }
+    if (!copyVisit && !copyProc && !copyDiag) {
+      status.textContent = "Select at least one thing to copy.";
+      status.className = "sync-status err";
+      return;
+    }
+    selectedDays.forEach(targetDay => {
+      const targetData = state.weekData[targetDay];
+      sourceData.forEach((srcPt, i) => {
+        if (!targetData[i]) return;
+        if (copyVisit) targetData[i].visitCode = srcPt.visitCode;
+        if (copyProc)  targetData[i].adhoc = [...srcPt.adhoc];
+        if (copyDiag)  targetData[i].diag  = [...srcPt.diag];
+      });
+    });
+    saveState();
+    document.body.removeChild(overlay);
+    render();
+  };
+
+  const cancelBtn = document.createElement("button");
+  cancelBtn.className = "sync-btn-secondary";
+  cancelBtn.textContent = "Cancel";
+  cancelBtn.onclick = () => document.body.removeChild(overlay);
+
+  btns.appendChild(goBtn);
+  btns.appendChild(cancelBtn);
+  card.appendChild(btns);
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
+}
+
+// ── Past Days (IndexedDB history) overlay ──────────────────────────────────
+async function showHistoryOverlay() {
+  const overlay = document.createElement("div");
+  overlay.className = "copy-overlay";
+  overlay.id = "historyOverlay";
+  const card = document.createElement("div");
+  card.className = "copy-card";
+  card.style.maxHeight = "82vh";
+  card.style.overflowY = "auto";
+
+  card.appendChild(el("div","copy-title","📅 Past Days"));
+  const sub = el("div","copy-sub","Loading saved history…");
+  card.appendChild(sub);
+
+  const listWrap = div("");
+  listWrap.style.cssText = "display:flex;flex-direction:column;gap:6px;margin-bottom:14px;";
+  card.appendChild(listWrap);
+
+  const closeBtn = btn("sync-btn-secondary","Close", ()=>document.body.removeChild(overlay));
+  closeBtn.style.width = "100%";
+  card.appendChild(closeBtn);
+
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
+
+  const records = (await idbGetAllDayRecords()).sort((a,b)=> b.date.localeCompare(a.date));
+
+  sub.textContent = records.length
+    ? `${records.length} saved day${records.length>1?"s":""} on this device. Tap one to view it.`
+    : "No history yet. Once a day has a date and at least one billing code, it's saved here automatically.";
+
+  records.forEach(rec => {
+    const row = document.createElement("button");
+    row.style.cssText = "display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid #e0e8f0;border-radius:8px;background:#f8fafc;cursor:pointer;text-align:left;width:100%;";
+    const left = div("");
+    const dnm = div(""); dnm.style.cssText="font-size:12px;font-weight:700;color:#0d2a3e;"; dnm.textContent = `${rec.dayName} · ${formatDisplayDate(rec.date)}`;
+    const cnt = div(""); cnt.style.cssText="font-size:10px;color:#6a7a8a;margin-top:1px;"; cnt.textContent = `${rec.filled}/${rec.total} billed`;
+    left.appendChild(dnm); left.appendChild(cnt);
+    const arrow = div(""); arrow.style.cssText="color:#8a95a0;font-size:15px;"; arrow.textContent="›";
+    row.appendChild(left); row.appendChild(arrow);
+    row.onclick = () => showHistoryDetail(rec, overlay);
+    listWrap.appendChild(row);
+  });
+}
+
+function showHistoryDetail(rec, listOverlay) {
+  const overlay = document.createElement("div");
+  overlay.className = "copy-overlay";
+  const card = document.createElement("div");
+  card.className = "copy-card";
+  card.style.maxHeight = "82vh";
+  card.style.overflowY = "auto";
+  card.style.maxWidth = "480px";
+
+  card.appendChild(el("div","copy-title", `${rec.dayName} · ${formatDisplayDate(rec.date)}`));
+  card.appendChild(el("div","copy-sub", `${rec.physician||PHYSICIAN.name} · OHIP ${rec.ohip||PHYSICIAN.ohip} · ${rec.filled}/${rec.total} billed`));
+
+  const tbl = el("table","summary-table");
+  const thead = el("thead"); const tr0 = el("tr");
+  ["Name","HCN","Visit","Procedures","Dx"].forEach(h=>{ const th=el("th"); th.textContent=h; tr0.appendChild(th); });
+  thead.appendChild(tr0); tbl.appendChild(thead);
+  const tbody = el("tbody");
+  rec.patients.forEach(p=>{
+    if (!p.visit && p.adhoc.length===0 && p.diag.length===0) return;
+    const tr = el("tr");
+    const tdName = el("td"); tdName.style.cssText="font-weight:600;white-space:nowrap;"; tdName.textContent = p.name || "—";
+    const tdHcn  = el("td"); tdHcn.style.cssText="font-family:monospace;font-size:9px;white-space:nowrap;"; tdHcn.textContent = p.hcn || "—";
+    const tdVc   = el("td"); tdVc.textContent = p.visit ? p.visit.code : "—";
+    const tdAd   = el("td"); tdAd.textContent = p.adhoc.map(a=>a.label).join(", ") || "—";
+    const tdDg   = el("td"); tdDg.textContent = p.diag.map(d=>d.label).join(", ") || "—";
+    [tdName,tdHcn,tdVc,tdAd,tdDg].forEach(td=>tr.appendChild(td));
+    tbody.appendChild(tr);
+  });
+  tbl.appendChild(tbody);
+  card.appendChild(tbl);
+
+  const btns = div("sync-btns");
+  btns.style.marginTop = "14px";
+  const delBtn = btn("btn-danger","Delete Record", async ()=>{
+    if (confirm(`Delete the saved record for ${formatDisplayDate(rec.date)}? This can't be undone.`)) {
+      await idbDeleteDayRecord(rec.date);
+      document.body.removeChild(overlay);
+      document.body.removeChild(listOverlay);
+      showHistoryOverlay();
+    }
+  });
+  delBtn.style.flex = "1";
+  const closeBtn = btn("sync-btn-secondary","Close", ()=>document.body.removeChild(overlay));
+  closeBtn.style.flex = "1";
+  btns.appendChild(closeBtn); btns.appendChild(delBtn);
+  card.appendChild(btns);
+
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
+}
+
+// ── Roster add/remove helpers ──────────────────────────────────────────────
+function addPatientSlot() {
+  if (state.roster.length >= 30) return; // hard cap
+  state.roster.push({ name:"", hcn:"", dob:"" });
+  state.rosterSize = state.roster.length;
+  DAYS.forEach(d => state.weekData[d].push(makePatientData()));
+  if (state.draftRoster) state.draftRoster.push({ name:"", hcn:"", dob:"" });
+  saveState(); render();
+}
+
+function removePatientSlot(i) {
+  if (state.roster.length <= 1) return;
+  const name = state.roster[i].name || `Patient ${i+1}`;
+  if (!confirm(`Remove ${name} from roster? Their billing entries for all days will also be removed.`)) return;
+  state.roster.splice(i, 1);
+  state.rosterSize = state.roster.length;
+  DAYS.forEach(d => state.weekData[d].splice(i, 1));
+  if (state.draftRoster && state.draftRoster.length > i) state.draftRoster.splice(i, 1);
+  saveState(); render();
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+function render() {
+  const app = document.getElementById("app");
+  app.innerHTML = "";
+
+  const pts   = getDayPatients();
+  const filled = pts.filter(p=>p.visitCode).length;
+  const counts = vcCounts();
+  const tally  = adhocTally();
+  const wb     = weekBilled();
+
+  // ── Header
+  const hdr = div("header");
+  const hl = div("header-left");
+  hl.appendChild(div("eyebrow", `${PHYSICIAN.name} · OHIP ${PHYSICIAN.ohip}`));
+  const dayDate = state.weekDates ? state.weekDates[state.selectedDay] : null;
+  const dayDateDisplay = dayDate ? formatDisplayDate(dayDate) : "";
+  hl.appendChild(div("day-name", `${state.selectedDay}${dayDateDisplay ? "  " + dayDateDisplay : ""}`));
+  const rFilled = state.roster.filter(p=>p.name||p.hcn).length;
+  hl.appendChild(div("sub", `${PHYSICIAN.site} · ${rFilled}/${state.roster.length} roster`));
+  const hr2 = div("header-right");
+  // sync status + button
+  const syncBar = div("");
+  syncBar.style.cssText = "display:flex;align-items:center;gap:6px;margin-bottom:6px;justify-content:flex-end;";
+  if (syncPin) {
+    const dot = div(""); dot.style.cssText="width:6px;height:6px;border-radius:50%;background:#2a7a5a;flex-shrink:0;";
+    const pinLbl = div(""); pinLbl.style.cssText="font-size:9px;color:#7ec8e3;font-family:monospace;font-weight:700;letter-spacing:0.1em;"; pinLbl.textContent=syncPin;
+    const sb = btn("","☁",()=>showSyncOverlay());
+    sb.style.cssText="padding:2px 7px;background:#1a4a6a;color:#7ec8e3;border:none;border-radius:5px;font-size:11px;cursor:pointer;";
+    syncBar.appendChild(dot); syncBar.appendChild(pinLbl); syncBar.appendChild(sb);
+  } else {
+    const sb = btn("","☁ Sync",()=>showSyncOverlay());
+    sb.style.cssText="padding:3px 9px;background:#1a4a6a;color:#7ec8e3;border:none;border-radius:5px;font-size:10px;cursor:pointer;font-weight:600;";
+    syncBar.appendChild(sb);
+  }
+  hr2.appendChild(syncBar);
+  hr2.appendChild(div("wk-label","WEEK BILLED"));
+  hr2.appendChild(div("wk-num", String(wb)));
+  hr2.appendChild(div("wk-sub","claims"));
+  hdr.appendChild(hl); hdr.appendChild(hr2);
+  app.appendChild(hdr);
+
+  // ── Day tabs
+  const dayTabs = div("day-tabs");
+  DAYS.forEach((d,i)=>{
+    const t = btn("day-tab"+(state.selectedDay===d?" active":""), "", ()=>{
+      state.selectedDay=d; state.showAdhoc=null; state.showDiag=null; state.showVC=null; render();
+    });
+    const nameSpan = document.createElement("span"); nameSpan.textContent = DAY_SHORT[i];
+    t.appendChild(nameSpan);
+    const dDate = state.weekDates && state.weekDates[d];
+    if (dDate) {
+      const dSpan = document.createElement("span"); dSpan.className = "day-tab-date";
+      const dp = dDate.split("-"); dSpan.textContent = dp[2]+"/"+dp[1];
+      t.appendChild(dSpan);
+    }
+    if (dayHasData(d)) { const dot=div("day-dot"); t.appendChild(dot); }
+    dayTabs.appendChild(t);
+  });
+  app.appendChild(dayTabs);
+
+  // ── Date picker (single selector for the active day) ──────────────────
+  const dateSection = div("date-section");
+  const dateLbl = div("date-section-label");
+  dateLbl.textContent = state.selectedDay + ":";
+  const dateInp = document.createElement("input");
+  dateInp.type = "date";
+  dateInp.value = (state.weekDates && state.weekDates[state.selectedDay]) || "";
+  dateInp.onchange = e => {
+    const v = e.target.value;
+    if (v) {
+      // Auto-fill the entire week from whichever day was just set
+      state.weekDates = getWeekDates(v);
+    } else {
+      if (!state.weekDates) state.weekDates = getWeekDates();
+      state.weekDates[state.selectedDay] = "";
+    }
+    saveState(); render();
+  };
+  const fillBtn = btn("fill-btn", "Fill Week ↻", () => {
+    const cur = state.weekDates && state.weekDates[state.selectedDay];
+    const ref = cur || toISODate(new Date());
+    state.weekDates = getWeekDates(ref);
+    saveState(); render();
+  });
+  dateSection.appendChild(dateLbl);
+  dateSection.appendChild(dateInp);
+  dateSection.appendChild(fillBtn);
+  app.appendChild(dateSection);
+
+  // ── View tabs
+  const viewTabs = div("view-tabs");
+  [["billing","📋 Assign Codes"],["summary","📄 JCL Summary"]].forEach(([v,lbl])=>{
+    viewTabs.appendChild(btn("view-tab"+(state.view===v?" active":""), lbl, ()=>{ state.view=v; render(); }));
+  });
+  app.appendChild(viewTabs);
+
+  // ── History button (IndexedDB-backed, persists across weeks)
+  const histBtn = btn("settings-toggle","📅 View Past Days", showHistoryOverlay);
+  histBtn.style.marginBottom = "9px";
+  app.appendChild(histBtn);
+
+  // ── BILLING VIEW
+  if (state.view==="billing") {
+    // VC counts row — grouped by Level A / B / C / Critical
+    const vcRow = div("vc-counts");
+    const LEVEL_GROUPS = [
+      { label:"Level A", ids:["VA1","VA2","VA3","VA4"], color:"#7a2a6a" },
+      { label:"Level B", ids:["VB1","VB2","VB3"],       color:"#1a6fa8" },
+      { label:"Level C", ids:["VC1","VC2","VC3"],        color:"#2a7a5a" },
+      { label:"Critical",ids:["VX1","VX2","VX3"],        color:"#aa2a2a" },
+      { label:"Other",   ids:["VY1","VY2"],              color:"#4a5a6a" },
+    ];
+    LEVEL_GROUPS.forEach(g=>{
+      const cnt = pts.filter(p=>g.ids.includes(p.visitCode)).length;
+      if (cnt===0 && g.label==="Other") return;
+      const card = div("vc-card");
+      card.style.borderTop=`3px solid ${g.color}`;
+      const num = div("vc-num", String(cnt));
+      num.style.color=g.color;
+      card.appendChild(num);
+      card.appendChild(div("vc-lbl",g.label));
+      vcRow.appendChild(card);
+    });
+    const adCard = div("vc-card");
+    adCard.style.borderTop="3px solid #b94a1a"; adCard.style.maxWidth="56px";
+    const adNum = div("vc-num", String(tally.reduce((n,a)=>n+a.count,0)));
+    adNum.style.color="#b94a1a";
+    adCard.appendChild(adNum);
+    adCard.appendChild(div("vc-lbl","Add-ons"));
+    vcRow.appendChild(adCard);
+    app.appendChild(vcRow);
+
+    // Progress
+    const pw = div("progress-bar-wrap");
+    const pt = div("progress-track");
+    const pf = div("progress-fill");
+    pf.style.width=`${(filled/state.roster.length)*100}%`;
+    pf.style.background = filled===state.roster.length ? "#2a7a5a" : "#1a6fa8";
+    pt.appendChild(pf);
+    const pl = div("progress-label", `${filled}/${state.roster.length}`);
+    pl.style.color = filled===state.roster.length ? "#2a7a5a" : "#1a6fa8";
+    pw.appendChild(pt); pw.appendChild(pl);
+    app.appendChild(pw);
+
+    // Patient list
+    const ptList = div("patient-list");
+    const colHdr = div("pt-col-headers");
+    colHdr.appendChild(div("pt-col-hdr","Patient"));
+    colHdr.appendChild(div("pt-col-hdr","Visit Code"));
+    colHdr.appendChild(div("pt-col-hdr","Procedures / Dx"));
+    colHdr.appendChild(div(""));
+    ptList.appendChild(colHdr);
+
+    pts.forEach((data,i)=>{
+      const pat = state.roster[i];
+      const ptRow = div("pt-row");
+
+      // main row
+      const main = div("pt-row-main");
+      const info = div("pt-info");
+      info.appendChild(div("pt-num", String(i+1).padStart(2,"0")));
+      if (pat.name||pat.hcn) {
+        info.appendChild(div("pt-name", pat.name||"—"));
+        info.appendChild(div("pt-hcn", pat.hcn||"—"));
+      } else {
+        info.appendChild(div("pt-unset","Not set"));
+      }
+      main.appendChild(info);
+
+      // VC select button
+      const activeVC = state.visitCodes.find(c=>c.id===data.visitCode);
+      const vcSelBtn = btn("vc-select-btn"+(activeVC?" has-code":""), activeVC?activeVC.label:"— VC", ()=>{
+        state.showVC = state.showVC===i ? null : i;
+        state.showAdhoc = null; state.showDiag = null; render();
+      });
+      if (activeVC) { vcSelBtn.style.background=activeVC.color; vcSelBtn.style.borderColor=activeVC.color; }
+      main.appendChild(vcSelBtn);
+
+      // Action buttons
+      const acts = div(""); acts.style.cssText="display:flex;gap:4px;flex:1;margin-left:4px;";
+      const procBtn = btn("pt-action-btn", data.adhoc.length>0?`+P(${data.adhoc.length})`:"+ Proc", ()=>{
+        state.showAdhoc = state.showAdhoc===i ? null : i;
+        state.showDiag = null; state.showVC = null; render();
+      });
+      procBtn.style.border = state.showAdhoc===i ? "1px solid #b94a1a" : "1px solid #e0c8b0";
+      procBtn.style.color  = state.showAdhoc===i ? "#fff" : "#b94a1a";
+      procBtn.style.background = state.showAdhoc===i ? "#b94a1a" : "#fff";
+
+      const diagBtn = btn("pt-action-btn", data.diag.length>0?`+D(${data.diag.length})`:"+ Dx", ()=>{
+        state.showDiag = state.showDiag===i ? null : i;
+        state.showAdhoc = null; state.showVC = null; render();
+      });
+      diagBtn.style.border = state.showDiag===i ? "1px solid #5a6a7a" : "1px solid #c0c8d8";
+      diagBtn.style.color  = state.showDiag===i ? "#fff" : "#5a6a7a";
+      diagBtn.style.background = state.showDiag===i ? "#5a6a7a" : "#fff";
+
+      acts.appendChild(procBtn); acts.appendChild(diagBtn);
+      main.appendChild(acts);
+
+      const chk = div("pt-check", data.visitCode?"✓":"");
+      if (activeVC) chk.style.color=activeVC.color;
+      main.appendChild(chk);
+      ptRow.appendChild(main);
+
+      // extras pills
+      const activeAdhoc = (state.customAdhoc || ADHOC_CODES).filter(a=>data.adhoc.includes(a.id));
+      const activeDiag  = state.diagCodes.filter(d=>data.diag.includes(d.id));
+      if (activeAdhoc.length||activeDiag.length) {
+        const extras = div("pt-extras");
+        activeAdhoc.forEach(a=>extras.appendChild(pillEl(a.label,a.color)));
+        activeDiag.forEach(d=>extras.appendChild(pillEl(d.label,"#5a6a7a")));
+        ptRow.appendChild(extras);
+      }
+
+      // VC picker
+      if (state.showVC===i) {
+        const vcPicker = div("picker");
+        vcPicker.appendChild(div("picker-title","Select Visit Code"));
+        const vcGroups = [...new Set(state.visitCodes.map(c=>c.group||"Other"))];
+        vcGroups.forEach(grp => {
+          const lbl = div("vc-group-label", grp);
+          vcPicker.appendChild(lbl);
+          const grpGrid = div("picker-grid");
+          state.visitCodes.filter(c=>(c.group||"Other")===grp).forEach(c=>{
+            const sel = data.visitCode===c.id;
+            const b = btn("picker-btn-vc"+(sel?" sel":""),"",()=>{ setVisit(i, sel?null:c.id); });
+            if (sel) { b.style.background=c.color; b.style.borderColor=c.color; }
+            else { b.style.borderColor=c.color+"70"; }
+            const codeS=el("span","vc-code"); codeS.textContent=c.label;
+            const descS=el("span","vc-desc"); descS.textContent=c.description;
+            b.appendChild(codeS); b.appendChild(descS);
+            grpGrid.appendChild(b);
+          });
+          vcPicker.appendChild(grpGrid);
+        });
+        if (data.visitCode) {
+          const clrBtn=btn("","✕ Clear",()=>{ setVisit(i,null); });
+          clrBtn.style.cssText="margin-top:6px;padding:3px 9px;font-size:9px;background:#fee8e8;border:1px solid #e8c0c0;border-radius:4px;color:#aa2a2a;cursor:pointer;font-weight:700;";
+          vcPicker.appendChild(clrBtn);
+        }
+        ptRow.appendChild(vcPicker);
+      }
+
+      // adhoc picker
+      if (state.showAdhoc===i) {
+        const picker = div("picker");
+        picker.appendChild(div("picker-title","Procedures / Consults"));
+        const grid = div("picker-grid");
+        (state.customAdhoc || ADHOC_CODES).forEach(a=>{
+          const sel = data.adhoc.includes(a.id);
+          const b = btn("picker-btn"+(sel?" sel":""), "", ()=>toggleAdhoc(i,a.id));
+          if (sel) { b.style.background=a.color; b.style.borderColor=a.color; b.style.color="#fff"; }
+          b.appendChild(document.createTextNode(a.label));
+          const ohipSpan = el("span","","");
+          ohipSpan.className="ohip"; ohipSpan.textContent=" "+a.ohip;
+          b.appendChild(ohipSpan);
+          grid.appendChild(b);
+        });
+        picker.appendChild(grid);
+        ptRow.appendChild(picker);
+      }
+
+      // diag picker
+      if (state.showDiag===i) {
+        const picker = div("picker");
+        picker.appendChild(div("picker-title","Diagnostic Codes"));
+        const grid = div("picker-grid");
+        state.diagCodes.forEach(d=>{
+          const sel = data.diag.includes(d.id);
+          const b = btn("picker-btn"+(sel?" sel":""), "", ()=>toggleDiag(i,d.id));
+          if (sel) { b.style.background="#5a6a7a"; b.style.borderColor="#5a6a7a"; b.style.color="#fff"; }
+          const lbl = el("span",""); lbl.style.fontWeight="700"; lbl.textContent=d.label;
+          const dsc = el("span",""); dsc.style.cssText="font-size:9px;opacity:0.8;margin-left:4px;"; dsc.textContent=d.description;
+          b.appendChild(lbl); b.appendChild(dsc);
+          grid.appendChild(b);
+        });
+        picker.appendChild(grid);
+        ptRow.appendChild(picker);
+      }
+
+
+      ptList.appendChild(ptRow);
+    });
+    app.appendChild(ptList);
+
+    // adhoc tally
+    if (tally.length>0) {
+      const at = div("adhoc-tally");
+      at.appendChild(div("adhoc-tally-title","Today's Procedure Add-ons"));
+      const items = div("adhoc-tally-items");
+      tally.forEach(a=>{
+        const item = div("adhoc-tally-item");
+        item.style.border=`1px solid ${a.color}50`;
+        const cnt = el("span",""); cnt.style.cssText=`font-weight:700;color:${a.color};`; cnt.textContent=`${a.count}×`;
+        const lbl = el("span",""); lbl.style.cssText="font-size:10px;color:#4a3a2a;margin-left:3px;"; lbl.textContent=a.label;
+        const ohip= el("span",""); ohip.style.cssText="font-size:9px;color:#9a8a7a;margin-left:2px;"; ohip.textContent=`[${a.ohip}]`;
+        item.appendChild(cnt); item.appendChild(lbl); item.appendChild(ohip);
+        items.appendChild(item);
+      });
+      at.appendChild(items);
+      app.appendChild(at);
+    }
+
+    // bottom buttons
+    app.appendChild(btn("btn-copy","⎘ Copy Today's Codes to Other Days",showCopyOverlay));
+    const bb = div("bottom-btns");
+    const toSumBtn = btn("btn-primary","View JCL Summary →",()=>{ state.view="summary"; render(); });
+    if (filled===0&&tally.length===0) toSumBtn.disabled=true;
+    bb.appendChild(toSumBtn);
+    bb.appendChild(btn("btn-danger","Clear Day",()=>{ if(confirm("Clear all entries for "+state.selectedDay+"?")) clearDay(); }));
+    app.appendChild(bb);
+  }
+
+  // ── SUMMARY VIEW
+  if (state.view==="summary") {
+    if (filled===0&&tally.length===0) {
+      app.appendChild(div("empty-state",`No entries for ${state.selectedDay} yet.`));
+    } else {
+      const box = div("summary-box");
+      const sumDayDate = state.weekDates ? state.weekDates[state.selectedDay] : null;
+      const sumDateStr = sumDayDate ? formatDisplayDate(sumDayDate) : "";
+      box.appendChild(div("summary-title", `JCL Billing Sheet — ${state.selectedDay}${sumDateStr ? "  " + sumDateStr : ""}`));
+      const sumPhys = div(""); sumPhys.style.cssText="font-size:10px;color:#4a6070;margin-bottom:7px;";
+      sumPhys.textContent = `${PHYSICIAN.name}  ·  OHIP# ${PHYSICIAN.ohip}  ·  ${PHYSICIAN.site}`
+      box.appendChild(sumPhys);
+
+      // table
+      const tbl = el("table","summary-table");
+      const thead = el("thead"); const tr0 = el("tr");
+      ["#","Name","HCN","DOB","Visit","Procedures","Dx"].forEach(h=>{ const th=el("th"); th.textContent=h; tr0.appendChild(th); });
+      thead.appendChild(tr0); tbl.appendChild(thead);
+      const tbody = el("tbody");
+      pts.forEach((data,i)=>{
+        const pat = state.roster[i];
+        const vc  = state.visitCodes.find(c=>c.id===data.visitCode);
+        const ads = (state.customAdhoc || ADHOC_CODES).filter(a=>data.adhoc.includes(a.id));
+        const dgs = state.diagCodes.filter(d=>data.diag.includes(d.id));
+        if (!vc&&ads.length===0&&dgs.length===0) return;
+        const tr = el("tr");
+        const tdNum=el("td"); tdNum.style.cssText="font-family:monospace;font-size:9px;color:#8a95a0;"; tdNum.textContent=String(i+1).padStart(2,"0");
+        const tdName=el("td"); tdName.style.cssText=`font-weight:600;color:${pat.name?"#1a2a3a":"#b0bcc8"};white-space:nowrap;`; tdName.textContent=pat.name||`Pt.${i+1}`;
+        const tdHcn=el("td"); tdHcn.style.cssText=`font-family:monospace;color:${pat.hcn?"#2a3a4a":"#c0ccd8"};white-space:nowrap;font-size:9px;`; tdHcn.textContent=pat.hcn||"—";
+        const tdDob=el("td"); tdDob.style.cssText="color:#4a5a6a;white-space:nowrap;font-size:9px;"; tdDob.textContent=pat.dob||"—";
+        const tdVc=el("td");
+        if (vc) { const p=pillEl(vc.label,vc.color); tdVc.appendChild(p); }
+        const tdAd=el("td");
+        ads.forEach(a=>tdAd.appendChild(pillEl(a.ohip,a.color)));
+        const tdDg=el("td");
+        dgs.forEach(d=>tdDg.appendChild(pillEl(d.label,"#5a6a7a")));
+        [tdNum,tdName,tdHcn,tdDob,tdVc,tdAd,tdDg].forEach(td=>tr.appendChild(td));
+        tbody.appendChild(tr);
+      });
+      tbl.appendChild(tbody);
+      box.appendChild(tbl);
+
+      // batch totals
+      const bs = div("batch-section");
+      bs.appendChild(div("batch-label","Batch Totals — Visit Codes"));
+      const chips1 = div("batch-chips");
+      state.visitCodes.filter(c=>counts[c.id]>0).forEach(c=>{
+        const chip = div("batch-chip");
+        chip.style.cssText=`background:#f0f8ff;border:1px solid ${c.color}30;`;
+        const n=el("span"); n.style.cssText=`font-size:15px;font-weight:800;color:${c.color};`; n.textContent=counts[c.id];
+        const l=el("span"); l.style.cssText="font-size:10px;color:#4a5a6a;margin-left:4px;"; l.textContent=c.label;
+        chip.appendChild(n); chip.appendChild(l); chips1.appendChild(chip);
+      });
+      bs.appendChild(chips1);
+      if (tally.length>0) {
+        bs.appendChild(div("batch-label","Batch Totals — Procedures"));
+        const chips2 = div("batch-chips");
+        tally.forEach(a=>{
+          const chip=div("batch-chip");
+          chip.style.cssText=`background:#fff5f0;border:1px solid ${a.color}30;`;
+          const n=el("span"); n.style.cssText=`font-size:14px;font-weight:800;color:${a.color};`; n.textContent=`${a.count}×`;
+          const l=el("span"); l.style.cssText="font-size:10px;color:#4a3a2a;margin-left:3px;"; l.textContent=a.label;
+          const o=el("span"); o.style.cssText="font-size:9px;color:#9a8a7a;margin-left:3px;"; o.textContent=`[${a.ohip}]`;
+          chip.appendChild(n); chip.appendChild(l); chip.appendChild(o); chips2.appendChild(chip);
+        });
+        bs.appendChild(chips2);
+      }
+      box.appendChild(bs);
+
+      if (filled<state.roster.length) { const n=state.roster.length-filled; const w=div("status-warn"); w.textContent=`⚠ ${n} patient${n>1?"s":""} unbilled`; box.appendChild(w); }
+      if (filled===state.roster.length) { const ok=div("status-ok"); ok.textContent=`✓ All ${state.roster.length} patients billed — ready for JCL`; box.appendChild(ok); }
+      app.appendChild(box);
+      app.appendChild(btn("btn-copy","Copy JCL Sheet to Clipboard",copyJCL));
+    }
+  }
+
+  // ── Settings
+  const settings = div("settings");
+
+  // Roster
+  const rBtn = btn("settings-toggle", `👤 Patient roster (${rFilled}/${state.roster.length} set)`, ()=>{
+    state.draftRoster = state.roster.map(p=>({...p}));
+    state.section = state.section==="roster" ? null : "roster";
+    render();
+  });
+  rBtn.textContent = state.section==="roster" ? "▲ Hide roster" : `👤 Patient roster (${rFilled}/${state.roster.length} set)`;
+  if (rFilled>0) rBtn.style.color="#1a6fa8";
+  settings.appendChild(rBtn);
+
+  if (state.section==="roster") {
+    const panel = div("settings-panel");
+    panel.appendChild(div("settings-hint","Enter once — name, HCN (with version code), DOB."));
+    const ghdr = div("settings-grid-hdr");
+    ["#","Name","HCN+VC","DOB",""].forEach(h=>{ const s=el("span","",h); ghdr.appendChild(s); });
+    panel.appendChild(ghdr);
+    state.draftRoster.forEach((p,i)=>{
+      const row = div("roster-row");
+      const idx = div("roster-idx", String(i+1).padStart(2,"0"));
+      row.appendChild(idx);
+      row.appendChild(inp(p.name,"Last, First",v=>{ state.draftRoster[i].name=v; }));
+      row.appendChild(inp(p.hcn,"HCN + VC",v=>{ state.draftRoster[i].hcn=v; }));
+      row.appendChild(inp(p.dob,"YYYY-MM-DD",v=>{ state.draftRoster[i].dob=v; }));
+      const delBtn = btn("btn-roster-del","×",()=>removePatientSlot(i));
+      if (state.roster.length<=1){ delBtn.disabled=true; delBtn.style.opacity="0.3"; delBtn.style.cursor="not-allowed"; }
+      row.appendChild(delBtn);
+      panel.appendChild(row);
+    });
+    panel.appendChild(btn("btn-roster-add","+ Add patient to roster",addPatientSlot));
+    const btns2 = div("settings-btns");
+    btns2.appendChild(btn("btn-save","Save Roster",()=>{ state.roster=state.draftRoster.map(p=>({...p})); state.section=null; saveState(); render(); }));
+    btns2.appendChild(btn("btn-cancel","Cancel",()=>{ state.section=null; render(); }));
+    panel.appendChild(btns2);
+    settings.appendChild(panel);
+  }
+
+  // Visit codes — read-only reference
+  settings.appendChild(btn("settings-toggle", state.section==="vcodes"?"▲ Hide visit codes":"ℹ Visit codes (preset)", ()=>{
+    state.section = state.section==="vcodes"?null:"vcodes"; render();
+  }));
+  if (state.section==="vcodes") {
+    const panel = div("settings-panel");
+    panel.appendChild(div("settings-hint","Preset OHIP visit codes. Grouped by care level — select one per patient per day."));
+    const vcGroups2 = [...new Set(state.visitCodes.map(c=>c.group||"Other"))];
+    vcGroups2.forEach(grp=>{
+      const lbl=div(""); lbl.style.cssText="font-size:9px;font-weight:700;color:#8a95a0;text-transform:uppercase;margin:6px 0 3px;"; lbl.textContent=grp;
+      panel.appendChild(lbl);
+      state.visitCodes.filter(c=>(c.group||"Other")===grp).forEach(c=>{
+        const row=div(""); row.style.cssText="display:flex;gap:6px;align-items:center;padding:2px 0;";
+        const code=div(""); code.style.cssText=`font-size:11px;font-weight:800;color:${c.color};width:40px;flex-shrink:0;`; code.textContent=c.label;
+        const desc=div(""); desc.style.cssText="font-size:10px;color:#4a5a6a;"; desc.textContent=c.description;
+        row.appendChild(code); row.appendChild(desc);
+        panel.appendChild(row);
+      });
+    });
+    settings.appendChild(panel);
+  }
+
+  // Diag codes
+  settings.appendChild(btn("settings-toggle", state.section==="diag"?"▲ Hide diagnostic codes":`✎ Edit diagnostic codes (${state.diagCodes.length} set)`, ()=>{
+    state.draftDiag = state.diagCodes.map(d=>({...d}));
+    state.section = state.section==="diag"?null:"diag"; render();
+  }));
+  if (state.section==="diag") {
+    const panel = div("settings-panel");
+    panel.appendChild(div("settings-hint","Customise your ICD-10 / OHIP diagnostic code list:"));
+    state.draftDiag.forEach((d,i)=>{
+      const row = div("diag-row");
+      const ci = inp(d.label,"Code",v=>{ state.draftDiag[i].label=v; });
+      ci.style.width="80px"; ci.style.flexShrink="0";
+      const di = inp(d.description,"Description",v=>{ state.draftDiag[i].description=v; });
+      di.style.flex="1";
+      const del = btn("btn-del","×",()=>{ state.draftDiag.splice(i,1); state.section="diag"; render(); });
+      row.appendChild(ci); row.appendChild(di); row.appendChild(del);
+      panel.appendChild(row);
+    });
+    panel.appendChild(btn("btn-add","+ Add code",()=>{
+      state.draftDiag.push({id:"D"+Date.now(),label:"",description:""});
+      state.section="diag"; render();
+    }));
+    panel.appendChild(btn("btn-save","Save Diagnostic Codes",()=>{ state.diagCodes=state.draftDiag.map(d=>({...d})); state.section=null; saveState(); render(); }));
+    settings.appendChild(panel);
+  }
+
+  // Ad-hoc / procedure codes
+  settings.appendChild(btn("settings-toggle", state.section==="adhoc"?"▲ Hide procedure codes":"✎ Edit procedure & consult codes", ()=>{
+    state.draftAdhoc = (state.customAdhoc || ADHOC_CODES).map(c=>({...c}));
+    state.section = state.section==="adhoc"?null:"adhoc"; render();
+  }));
+  if (state.section==="adhoc") {
+    const adhocSource = state.customAdhoc || ADHOC_CODES;
+    if (!state.draftAdhoc) state.draftAdhoc = adhocSource.map(c=>({...c}));
+    const panel = div("settings-panel");
+    panel.appendChild(div("settings-hint","Edit labels and OHIP codes for procedure/consult add-ons:"));
+    // column headers
+    const ahHdr = div(""); ahHdr.style.cssText="display:grid;grid-template-columns:24px 1fr 80px 24px;gap:5px;margin-bottom:4px;";
+    ["#","Label","OHIP Code",""].forEach(h=>{ const s=el("span","",h); s.style.cssText="font-size:9px;font-weight:700;color:#8a95a0;"; ahHdr.appendChild(s); });
+    panel.appendChild(ahHdr);
+    state.draftAdhoc.forEach((c,i)=>{
+      const row = div(""); row.style.cssText="display:grid;grid-template-columns:24px 1fr 80px 24px;gap:5px;align-items:center;padding:3px 0;border-bottom:1px solid #f0f4f8;";
+      const idx = div(""); idx.style.cssText="font-size:9px;color:#8a95a0;font-family:monospace;text-align:right;"; idx.textContent=String(i+1).padStart(2,"0");
+      const li = inp(c.label,"Label",v=>{ state.draftAdhoc[i].label=v; });
+      const oi = inp(c.ohip,"OHIP",v=>{ state.draftAdhoc[i].ohip=v; });
+      const del = btn("btn-del","×",()=>{ state.draftAdhoc.splice(i,1); state.section="adhoc"; render(); });
+      row.appendChild(idx); row.appendChild(li); row.appendChild(oi); row.appendChild(del);
+      panel.appendChild(row);
+    });
+    panel.appendChild(btn("btn-add","+ Add procedure code",()=>{
+      if (!state.draftAdhoc) state.draftAdhoc = (state.customAdhoc||ADHOC_CODES).map(c=>({...c}));
+      state.draftAdhoc.push({id:"AX"+Date.now(),label:"",ohip:"",color:"#1a7a5a"});
+      state.section="adhoc"; render();
+    }));
+    const saveBtns = div("settings-btns");
+    saveBtns.appendChild(btn("btn-save","Save Procedure Codes",()=>{
+      state.customAdhoc = state.draftAdhoc.map(c=>({...c}));
+      state.draftAdhoc = null;
+      state.section=null; saveState(); render();
+    }));
+    saveBtns.appendChild(btn("btn-cancel","Reset to Defaults",()=>{
+      if(confirm("Reset all procedure codes to defaults?")){ state.customAdhoc=null; state.draftAdhoc=null; state.section=null; saveState(); render(); }
+    }));
+    panel.appendChild(saveBtns);
+    settings.appendChild(panel);
+  }
+
+  app.appendChild(settings);
+}
+
+// kick off
+render();
+</script>
+</body>
+</html>
