@@ -292,6 +292,25 @@ const DEFAULT_DIAG = [
   { id:"DX13", label:"767",  description:"Birth Trauma" },
   { id:"DX14", label:"749",  description:"Cleft Lip / Palate" },
   { id:"DX15", label:"741",  description:"Neural Tube Defect" },
+  { id:"DX16", label:"038",  description:"Septicemia, blood poisoning" },
+  { id:"DX17", label:"243",  description:"Hypothyroidism - congenital" },
+  { id:"DX18", label:"304",  description:"Neonatal withdrawal disorders due to maternal psychoactive substance use (e.g. alcohol, opioids, cannabinoids, nicotine, cocaine, hallucinogens, sedative/hypnotics, stimulants not including caffeine, etc)" },
+  { id:"DX19", label:"739",  description:"Other diseases of musculoskeletal system and connective tissue" },
+  { id:"DX20", label:"741",  description:"Spina bifida, with or without hydrocephalus, meningocele, meningomyelocele" },
+  { id:"DX21", label:"742",  description:"Hydrocephalus" },
+  { id:"DX22", label:"743",  description:"Congenital anomalies of eye" },
+  { id:"DX23", label:"744",  description:"Congenital anomalies of ear, face, and neck" },
+  { id:"DX24", label:"745",  description:"Transposition of great vessels, tetralogy of Fallot, ventricular septal defect, atrial septal defect" },
+  { id:"DX25", label:"746",  description:"Other congenital anomalies of heart" },
+  { id:"DX26", label:"747",  description:"Patent ductus arteriosus, coarctation of aorta, pulmonary artery stenosis, other anomalies of circulatory system" },
+  { id:"DX27", label:"748",  description:"Congenital anomalies of nose and respiratory system" },
+  { id:"DX28", label:"749",  description:"Cleft palate, cleft lip" },
+  { id:"DX29", label:"750",  description:"Other congenital anomalies of mouth esophagus, stomach, and pylorus" },
+  { id:"DX30", label:"754",  description:"Club foot" },
+  { id:"DX31", label:"759",  description:"Other congenital anomalies" },
+  { id:"DX32", label:"762",  description:"Compression of umbilical cord, prolapsed cord" },
+  { id:"DX33", label:"763",  description:"Due to complications of labour or delivery" },
+  { id:"DX34", label:"779",  description:"Other conditions of fetus or newborn" },
 ];
 
 const makePatientData = () => ({ visitCode: null, adhoc: [], diag: [] });
@@ -356,6 +375,113 @@ async function cloudCreate(data) {
   } catch(e) { return null; }
 }
 
+// ── IndexedDB (automatic local history, keyed by real calendar date) ──────
+// This is separate from the localStorage "current week" cache above — it
+// keeps a permanent per-date snapshot so past weeks aren't lost when new
+// dates get assigned to the Sun–Sat tabs.
+const IDB_NAME    = "nicuBillingDB";
+const IDB_VERSION = 1;
+const IDB_STORE   = "dayRecords";
+let idbDB = null;
+
+function openIDB() {
+  return new Promise((resolve, reject) => {
+    if (idbDB) return resolve(idbDB);
+    if (!window.indexedDB) return reject(new Error("IndexedDB not supported"));
+    const req = indexedDB.open(IDB_NAME, IDB_VERSION);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(IDB_STORE)) {
+        db.createObjectStore(IDB_STORE, { keyPath: "date" }); // date = "YYYY-MM-DD"
+      }
+    };
+    req.onsuccess = (e) => { idbDB = e.target.result; resolve(idbDB); };
+    req.onerror   = (e) => reject(e.target.error);
+  });
+}
+
+async function idbPutDayRecord(record) {
+  try {
+    const db = await openIDB();
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, "readwrite");
+      tx.objectStore(IDB_STORE).put(record);
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = (e) => reject(e.target.error);
+    });
+  } catch (e) { console.error("IndexedDB save failed:", e); return false; }
+}
+
+async function idbDeleteDayRecord(date) {
+  try {
+    const db = await openIDB();
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, "readwrite");
+      tx.objectStore(IDB_STORE).delete(date);
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = (e) => reject(e.target.error);
+    });
+  } catch (e) { console.error("IndexedDB delete failed:", e); return false; }
+}
+
+async function idbGetAllDayRecords() {
+  try {
+    const db = await openIDB();
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, "readonly");
+      const req = tx.objectStore(IDB_STORE).getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = (e) => reject(e.target.error);
+    });
+  } catch (e) { console.error("IndexedDB read failed:", e); return []; }
+}
+
+// Build a snapshot for one Sun–Sat tab, if it has a real calendar date assigned.
+function buildDayRecord(dayName) {
+  const iso = state.weekDates && state.weekDates[dayName];
+  if (!iso) return null;
+  const patients = state.weekData[dayName];
+  if (!patients) return null;
+  const rows = patients.map((p, i) => {
+    const pat = state.roster[i] || { name:"", hcn:"", dob:"" };
+    const vc  = state.visitCodes.find(c => c.id === p.visitCode);
+    const ads = (state.customAdhoc || ADHOC_CODES).filter(a => p.adhoc.includes(a.id));
+    const dgs = state.diagCodes.filter(d => p.diag.includes(d.id));
+    return {
+      name: pat.name || "", hcn: pat.hcn || "", dob: pat.dob || "",
+      visit: vc ? { code: vc.label, desc: vc.description } : null,
+      adhoc: ads.map(a => ({ label: a.label, ohip: a.ohip })),
+      diag:  dgs.map(d => ({ label: d.label, desc: d.description })),
+    };
+  });
+  const hasData = rows.some(r => r.visit || r.adhoc.length || r.diag.length);
+  if (!hasData) return null;
+  return {
+    date: iso,
+    dayName,
+    physician: PHYSICIAN.name,
+    ohip: PHYSICIAN.ohip,
+    site: PHYSICIAN.site,
+    savedAt: Date.now(),
+    filled: patients.filter(p => p.visitCode).length,
+    total: patients.length,
+    patients: rows,
+  };
+}
+
+// Called automatically on every save — pushes each dated tab's snapshot into
+// IndexedDB (or removes it if it was cleared out), so history persists
+// across weeks without any manual action.
+async function syncHistoryToIDB() {
+  for (const d of DAYS) {
+    const iso = state.weekDates && state.weekDates[d];
+    if (!iso) continue;
+    const rec = buildDayRecord(d);
+    if (rec) await idbPutDayRecord(rec);
+    else await idbDeleteDayRecord(iso);
+  }
+}
+
 // ── State ──────────────────────────────────────────────────────────────────
 function loadLocalState() {
   try {
@@ -414,6 +540,8 @@ function saveState() {
     localStorage.setItem("nicu_billing_v3", JSON.stringify(getSerializableState()));
     showSaveBanner("✓ Saved locally");
   } catch(e){}
+  // Fire-and-forget: snapshot every dated day into IndexedDB for permanent history.
+  syncHistoryToIDB().catch(e => console.error("History sync failed:", e));
 }
 
 async function pushToCloud() {
@@ -858,6 +986,102 @@ function showCopyOverlay() {
   document.body.appendChild(overlay);
 }
 
+// ── Past Days (IndexedDB history) overlay ──────────────────────────────────
+async function showHistoryOverlay() {
+  const overlay = document.createElement("div");
+  overlay.className = "copy-overlay";
+  overlay.id = "historyOverlay";
+  const card = document.createElement("div");
+  card.className = "copy-card";
+  card.style.maxHeight = "82vh";
+  card.style.overflowY = "auto";
+
+  card.appendChild(el("div","copy-title","📅 Past Days"));
+  const sub = el("div","copy-sub","Loading saved history…");
+  card.appendChild(sub);
+
+  const listWrap = div("");
+  listWrap.style.cssText = "display:flex;flex-direction:column;gap:6px;margin-bottom:14px;";
+  card.appendChild(listWrap);
+
+  const closeBtn = btn("sync-btn-secondary","Close", ()=>document.body.removeChild(overlay));
+  closeBtn.style.width = "100%";
+  card.appendChild(closeBtn);
+
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
+
+  const records = (await idbGetAllDayRecords()).sort((a,b)=> b.date.localeCompare(a.date));
+
+  sub.textContent = records.length
+    ? `${records.length} saved day${records.length>1?"s":""} on this device. Tap one to view it.`
+    : "No history yet. Once a day has a date and at least one billing code, it's saved here automatically.";
+
+  records.forEach(rec => {
+    const row = document.createElement("button");
+    row.style.cssText = "display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid #e0e8f0;border-radius:8px;background:#f8fafc;cursor:pointer;text-align:left;width:100%;";
+    const left = div("");
+    const dnm = div(""); dnm.style.cssText="font-size:12px;font-weight:700;color:#0d2a3e;"; dnm.textContent = `${rec.dayName} · ${formatDisplayDate(rec.date)}`;
+    const cnt = div(""); cnt.style.cssText="font-size:10px;color:#6a7a8a;margin-top:1px;"; cnt.textContent = `${rec.filled}/${rec.total} billed`;
+    left.appendChild(dnm); left.appendChild(cnt);
+    const arrow = div(""); arrow.style.cssText="color:#8a95a0;font-size:15px;"; arrow.textContent="›";
+    row.appendChild(left); row.appendChild(arrow);
+    row.onclick = () => showHistoryDetail(rec, overlay);
+    listWrap.appendChild(row);
+  });
+}
+
+function showHistoryDetail(rec, listOverlay) {
+  const overlay = document.createElement("div");
+  overlay.className = "copy-overlay";
+  const card = document.createElement("div");
+  card.className = "copy-card";
+  card.style.maxHeight = "82vh";
+  card.style.overflowY = "auto";
+  card.style.maxWidth = "480px";
+
+  card.appendChild(el("div","copy-title", `${rec.dayName} · ${formatDisplayDate(rec.date)}`));
+  card.appendChild(el("div","copy-sub", `${rec.physician||PHYSICIAN.name} · OHIP ${rec.ohip||PHYSICIAN.ohip} · ${rec.filled}/${rec.total} billed`));
+
+  const tbl = el("table","summary-table");
+  const thead = el("thead"); const tr0 = el("tr");
+  ["Name","HCN","Visit","Procedures","Dx"].forEach(h=>{ const th=el("th"); th.textContent=h; tr0.appendChild(th); });
+  thead.appendChild(tr0); tbl.appendChild(thead);
+  const tbody = el("tbody");
+  rec.patients.forEach(p=>{
+    if (!p.visit && p.adhoc.length===0 && p.diag.length===0) return;
+    const tr = el("tr");
+    const tdName = el("td"); tdName.style.cssText="font-weight:600;white-space:nowrap;"; tdName.textContent = p.name || "—";
+    const tdHcn  = el("td"); tdHcn.style.cssText="font-family:monospace;font-size:9px;white-space:nowrap;"; tdHcn.textContent = p.hcn || "—";
+    const tdVc   = el("td"); tdVc.textContent = p.visit ? p.visit.code : "—";
+    const tdAd   = el("td"); tdAd.textContent = p.adhoc.map(a=>a.label).join(", ") || "—";
+    const tdDg   = el("td"); tdDg.textContent = p.diag.map(d=>d.label).join(", ") || "—";
+    [tdName,tdHcn,tdVc,tdAd,tdDg].forEach(td=>tr.appendChild(td));
+    tbody.appendChild(tr);
+  });
+  tbl.appendChild(tbody);
+  card.appendChild(tbl);
+
+  const btns = div("sync-btns");
+  btns.style.marginTop = "14px";
+  const delBtn = btn("btn-danger","Delete Record", async ()=>{
+    if (confirm(`Delete the saved record for ${formatDisplayDate(rec.date)}? This can't be undone.`)) {
+      await idbDeleteDayRecord(rec.date);
+      document.body.removeChild(overlay);
+      document.body.removeChild(listOverlay);
+      showHistoryOverlay();
+    }
+  });
+  delBtn.style.flex = "1";
+  const closeBtn = btn("sync-btn-secondary","Close", ()=>document.body.removeChild(overlay));
+  closeBtn.style.flex = "1";
+  btns.appendChild(closeBtn); btns.appendChild(delBtn);
+  card.appendChild(btns);
+
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
+}
+
 // ── Roster add/remove helpers ──────────────────────────────────────────────
 function addPatientSlot() {
   if (state.roster.length >= 30) return; // hard cap
@@ -975,6 +1199,11 @@ function render() {
     viewTabs.appendChild(btn("view-tab"+(state.view===v?" active":""), lbl, ()=>{ state.view=v; render(); }));
   });
   app.appendChild(viewTabs);
+
+  // ── History button (IndexedDB-backed, persists across weeks)
+  const histBtn = btn("settings-toggle","📅 View Past Days", showHistoryOverlay);
+  histBtn.style.marginBottom = "9px";
+  app.appendChild(histBtn);
 
   // ── BILLING VIEW
   if (state.view==="billing") {
