@@ -155,6 +155,18 @@
   .date-section .fill-btn { padding:5px 9px; background:#f0f8ff; border:1px solid #b0d0e8; border-radius:6px; font-size:10px; color:#1a6fa8; font-weight:600; cursor:pointer; white-space:nowrap; flex-shrink:0; }
   .day-tab-date { display:block; font-size:7px; font-weight:400; opacity:0.75; margin-top:1px; }
 
+  /* Summary blocks (wrap instead of truncating) */
+  .sum-pt { padding: 7px 0; border-bottom: 1px solid #eef2f6; }
+  .sum-pt-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .sum-pt-num { font-family: monospace; font-size: 9px; color: #8a95a0; }
+  .sum-pt-name { font-size: 11px; font-weight: 700; color: #1a2a3a; }
+  .sum-pt-meta { font-size: 9px; font-family: monospace; color: #6a7a8a; }
+  .sum-pt-vdesc { font-size: 9px; color: #6a7a8a; }
+  .sum-pt-lines { margin: 4px 0 0 18px; display: flex; flex-direction: column; gap: 3px; }
+  .sum-line { display: flex; gap: 6px; align-items: flex-start; }
+  .sum-line-lbl { font-size: 8px; font-weight: 700; color: #8a95a0; text-transform: uppercase; width: 34px; flex-shrink: 0; padding-top: 3px; }
+  .sum-line-pills { display: flex; flex-wrap: wrap; gap: 3px; flex: 1; min-width: 0; }
+  .sum-line-pills .pill { margin: 0; }
   .empty-state { background: #fff; border-radius: 10px; padding: 24px; text-align: center; color: #8a95a0; font-size: 13px; }
 
   .save-banner { position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); background: #0d2a3e; color: #7ec8e3; font-size: 11px; font-weight: 600; padding: 7px 16px; border-radius: 20px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; }
@@ -206,6 +218,7 @@ const ADHOC_CODES = [
   // Consults
   { id:"AD08", label:"Criti-call Consult",       ohip:"K732",  color:"#6a4a9a" },
   { id:"AD09", label:"Consult (ref. MD req.)",   ohip:"C265",  color:"#6a4a9a" },
+  { id:"AD19", label:"Specific Assessment",      ohip:"C263",  color:"#6a4a9a" },
   // Procedures
   { id:"AD10", label:"Lumbar Puncture",          ohip:"Z804",  color:"#1a7a5a" },
   { id:"AD11", label:"Needle Thoracotomy",       ohip:"Z332",  color:"#1a7a5a" },
@@ -216,6 +229,28 @@ const ADHOC_CODES = [
   { id:"AD16", label:"PICC",                     ohip:"Z465",  color:"#1a7a5a" },
   { id:"AD17", label:"Intubation",               ohip:"G211",  color:"#1a7a5a" },
   { id:"AD18", label:"Paracentesis",             ohip:"Z591",  color:"#1a7a5a" },
+];
+
+// Special Visit Premiums — hospital in-patient (C-prefix). Bill with A-prefix consult/assessment.
+const SVP_CODES = [
+  // Travel premium
+  { id:"SVT1", label:"Travel · Wkday",          ohip:"C960", color:"#8a6a1a", group:"Travel Premium",   description:"Weekday day 07–17" },
+  { id:"SVT2", label:"Travel · Wkday (Sacr.)",  ohip:"C961", color:"#8a6a1a", group:"Travel Premium",   description:"Weekday day, sacrifice of office hrs" },
+  { id:"SVT3", label:"Travel · Evening",        ohip:"C962", color:"#8a6a1a", group:"Travel Premium",   description:"Evening Mon–Fri 17–24" },
+  { id:"SVT4", label:"Travel · Wknd/Hol",       ohip:"C963", color:"#8a6a1a", group:"Travel Premium",   description:"Sat/Sun/Holiday 07–24" },
+  { id:"SVT5", label:"Travel · Night",          ohip:"C964", color:"#8a6a1a", group:"Travel Premium",   description:"Night 00–07" },
+  // First person seen
+  { id:"SVF1", label:"1st seen · Wkday",        ohip:"C990", color:"#9a3a6a", group:"First Person Seen", description:"Weekday day 07–17" },
+  { id:"SVF2", label:"1st seen · Wkday (Sacr.)",ohip:"C992", color:"#9a3a6a", group:"First Person Seen", description:"Weekday day, sacrifice of office hrs" },
+  { id:"SVF3", label:"1st seen · Evening",      ohip:"C994", color:"#9a3a6a", group:"First Person Seen", description:"Evening Mon–Fri 17–24" },
+  { id:"SVF4", label:"1st seen · Wknd/Hol",     ohip:"C986", color:"#9a3a6a", group:"First Person Seen", description:"Sat/Sun/Holiday 07–24" },
+  { id:"SVF5", label:"1st seen · Night",        ohip:"C996", color:"#9a3a6a", group:"First Person Seen", description:"Night 00–07" },
+  // Additional person(s) seen
+  { id:"SVA1", label:"Addl seen · Wkday",        ohip:"C991", color:"#4a6a9a", group:"Additional Person Seen", description:"Weekday day 07–17" },
+  { id:"SVA2", label:"Addl seen · Wkday (Sacr.)",ohip:"C993", color:"#4a6a9a", group:"Additional Person Seen", description:"Weekday day, sacrifice of office hrs" },
+  { id:"SVA3", label:"Addl seen · Evening",      ohip:"C995", color:"#4a6a9a", group:"Additional Person Seen", description:"Evening Mon–Fri 17–24" },
+  { id:"SVA4", label:"Addl seen · Wknd/Hol",     ohip:"C987", color:"#4a6a9a", group:"Additional Person Seen", description:"Sat/Sun/Holiday 07–24" },
+  { id:"SVA5", label:"Addl seen · Night",        ohip:"C997", color:"#4a6a9a", group:"Additional Person Seen", description:"Night 00–07" },
 ];
 
 const DAYS     = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
@@ -313,7 +348,7 @@ const DEFAULT_DIAG = [
   { id:"DX34", label:"779",  description:"Other conditions of fetus or newborn" },
 ];
 
-const makePatientData = () => ({ visitCode: null, adhoc: [], diag: [] });
+const makePatientData = () => ({ visitCode: null, adhoc: [], diag: [], svp: [] });
 const makeDay = (n) => Array(n||25).fill(null).map(makePatientData);
 const makeRoster = (n) => Array(n||25).fill(null).map(()=>({ name:"", hcn:"", dob:"" }));
 
@@ -442,20 +477,8 @@ function buildDayRecord(dayName) {
   if (!iso) return null;
   const patients = state.weekData[dayName];
   if (!patients) return null;
-  const rows = patients.map((p, i) => {
-    const pat = state.roster[i] || { name:"", hcn:"", dob:"" };
-    const vc  = state.visitCodes.find(c => c.id === p.visitCode);
-    const ads = (state.customAdhoc || ADHOC_CODES).filter(a => p.adhoc.includes(a.id));
-    const dgs = state.diagCodes.filter(d => p.diag.includes(d.id));
-    return {
-      name: pat.name || "", hcn: pat.hcn || "", dob: pat.dob || "",
-      visit: vc ? { code: vc.label, desc: vc.description } : null,
-      adhoc: ads.map(a => ({ label: a.label, ohip: a.ohip })),
-      diag:  dgs.map(d => ({ label: d.label, desc: d.description })),
-    };
-  });
-  const hasData = rows.some(r => r.visit || r.adhoc.length || r.diag.length);
-  if (!hasData) return null;
+  const rows = patients.map((p, i) => patientRow(i, p)).filter(rowHasData);
+  if (!rows.length) return null;
   return {
     date: iso,
     dayName,
@@ -506,6 +529,7 @@ function defaultState() {
     showAdhoc: null,
     showDiag: null,
     showVC: null,
+    showSVP: null,
     draftVC: DEFAULT_VC,
     draftDiag: DEFAULT_DIAG,
     draftRoster: makeRoster(),
@@ -514,11 +538,22 @@ function defaultState() {
 
 function mergeState(saved, def) {
   if (!saved) return def;
+  // Migration: older saved data has no special-visit-premium array per patient
+  if (saved.weekData) Object.values(saved.weekData).forEach(day => (day || []).forEach(p => { if (!Array.isArray(p.svp)) p.svp = []; }));
+  // Migration: add the C263 ad-hoc code once to a customised procedure list
+  if (Array.isArray(saved.customAdhoc) && !saved.migratedAD19) {
+    if (!saved.customAdhoc.some(c => c.id === "AD19")) {
+      const c263 = ADHOC_CODES.find(c => c.id === "AD19");
+      if (c263) saved.customAdhoc.push({ ...c263 });
+    }
+    saved.migratedAD19 = true;
+  }
   return {
     ...def,
     ...saved,
     showAdhoc: null,
     showDiag: null,
+    showSVP: null,
     showVC: null,
     section: null,
     weekDates: saved.weekDates || getWeekDates(),
@@ -531,7 +566,7 @@ function mergeState(saved, def) {
 let state = mergeState(loadLocalState(), defaultState());
 
 function getSerializableState() {
-  const { draftVC, draftDiag, draftRoster, showAdhoc, showDiag, showVC, section, ...toSave } = state;
+  const { draftVC, draftDiag, draftRoster, showAdhoc, showDiag, showSVP, showVC, section, ...toSave } = state;
   return toSave;
 }
 
@@ -766,7 +801,7 @@ function dayFilled(day) {
 }
 
 function dayHasData(day) {
-  return state.weekData[day].some(p=>p.visitCode||p.adhoc.length||p.diag.length);
+  return state.weekData[day].some(p=>p.visitCode||p.adhoc.length||p.diag.length||(p.svp&&p.svp.length));
 }
 
 function vcCounts() {
@@ -778,6 +813,61 @@ function adhocTally() {
   const pts = getDayPatients();
   const codes = state.customAdhoc || ADHOC_CODES;
   return codes.map(a=>({...a, count: pts.reduce((n,p)=>n+(p.adhoc.includes(a.id)?1:0),0)})).filter(a=>a.count>0);
+}
+
+function svpTally() {
+  const pts = getDayPatients();
+  return SVP_CODES.map(s=>({...s, count: pts.reduce((n,p)=>n+((p.svp||[]).includes(s.id)?1:0),0)})).filter(s=>s.count>0);
+}
+
+// Normalised, display-ready view of one patient's day (used by summary, copy, and history)
+function patientRow(i, data) {
+  const pat = state.roster[i] || { name:"", hcn:"", dob:"" };
+  const vc  = state.visitCodes.find(c => c.id === data.visitCode);
+  const ads = (state.customAdhoc || ADHOC_CODES).filter(a => data.adhoc.includes(a.id));
+  const svs = SVP_CODES.filter(s => (data.svp || []).includes(s.id));
+  const dgs = state.diagCodes.filter(d => data.diag.includes(d.id));
+  return {
+    num: String(i+1).padStart(2,"0"),
+    name: pat.name || "", hcn: pat.hcn || "", dob: pat.dob || "",
+    visit: vc ? { code: vc.label, desc: vc.description, color: vc.color } : null,
+    adhoc: ads.map(a => ({ label: a.label, ohip: a.ohip, color: a.color })),
+    svp:   svs.map(s => ({ label: s.label, ohip: s.ohip, color: s.color })),
+    diag:  dgs.map(d => ({ label: d.label, desc: d.description })),
+  };
+}
+function rowHasData(r) { return !!(r.visit || r.adhoc.length || (r.svp||[]).length || r.diag.length); }
+
+// One patient block for the JCL summary / history — pills wrap, nothing is clipped
+function summaryBlock(row) {
+  const wrap = div("sum-pt");
+  const head = div("sum-pt-head");
+  head.appendChild(div("sum-pt-num", row.num));
+  const nm = div("sum-pt-name", row.name || `Pt.${Number(row.num)}`);
+  if (!row.name) nm.style.color = "#b0bcc8";
+  head.appendChild(nm);
+  if (row.hcn) head.appendChild(div("sum-pt-meta", row.hcn));
+  if (row.dob) head.appendChild(div("sum-pt-meta", row.dob));
+  if (row.visit) {
+    head.appendChild(pillEl(row.visit.code, row.visit.color || "#4a5a6a"));
+    head.appendChild(div("sum-pt-vdesc", row.visit.desc || ""));
+  }
+  wrap.appendChild(head);
+  const lines = div("sum-pt-lines");
+  const addLine = (lbl, pills) => {
+    if (!pills.length) return;
+    const ln = div("sum-line");
+    ln.appendChild(div("sum-line-lbl", lbl));
+    const pw = div("sum-line-pills");
+    pills.forEach(x => pw.appendChild(x));
+    ln.appendChild(pw);
+    lines.appendChild(ln);
+  };
+  addLine("Proc", (row.adhoc||[]).map(a => pillEl(`${a.label} · ${a.ohip}`, a.color || "#b94a1a")));
+  addLine("SVP",  (row.svp||[]).map(s => pillEl(`${s.label} · ${s.ohip}`, s.color || "#9a3a6a")));
+  addLine("Dx",   (row.diag||[]).map(d => pillEl(d.label, "#5a6a7a")));
+  if (lines.children.length) wrap.appendChild(lines);
+  return wrap;
 }
 
 // ── Mutations ──────────────────────────────────────────────────────────────
@@ -798,9 +888,16 @@ function toggleDiag(pi, did) {
   if (idx>=0) arr.splice(idx,1); else arr.push(did);
   saveState(); render();
 }
+function toggleSVP(pi, sid) {
+  const p = state.weekData[state.selectedDay][pi];
+  if (!Array.isArray(p.svp)) p.svp = [];
+  const idx = p.svp.indexOf(sid);
+  if (idx>=0) p.svp.splice(idx,1); else p.svp.push(sid);
+  saveState(); render();
+}
 function clearDay() {
   state.weekData[state.selectedDay] = makeDay();
-  state.showAdhoc = null; state.showDiag = null; state.showVC = null;
+  state.showAdhoc = null; state.showDiag = null; state.showVC = null; state.showSVP = null;
   saveState(); render();
 }
 
@@ -809,51 +906,44 @@ function copyJCL() {
   const pts = getDayPatients();
   const dayDate = state.weekDates ? state.weekDates[state.selectedDay] : null;
   const dateStr = dayDate ? formatDisplayDate(dayDate) : new Date().toLocaleDateString("en-CA");
-  const col = (s,w) => String(s||"").padEnd(w).slice(0,w);
-  const rows = pts.map((p,i)=>{
-    const pat = state.roster[i];
-    const vc  = state.visitCodes.find(c=>c.id===p.visitCode);
-    const ads = (state.customAdhoc || ADHOC_CODES).filter(a=>p.adhoc.includes(a.id));
-    const dgs = state.diagCodes.filter(d=>p.diag.includes(d.id));
-    if (!vc && ads.length===0 && dgs.length===0) return null;
-    return {
-      num: String(i+1).padStart(2,"0"),
-      name: pat.name || `Patient ${i+1}`,
-      hcn: pat.hcn || "—",
-      dob: pat.dob || "—",
-      visit: vc ? `${vc.label} (${vc.description})` : "—",
-      adhoc: ads.map(a=>`${a.label}[${a.ohip}]`).join(", ") || "—",
-      diag:  dgs.map(d=>`${d.label} ${d.description}`).join(", ") || "—",
-    };
-  }).filter(Boolean);
+  const pad = (s,w) => String(s==null?"":s).padEnd(w); // pads only — never truncates
+  const rows = pts.map((p,i)=>patientRow(i,p)).filter(rowHasData);
 
   const filled = pts.filter(p=>p.visitCode).length;
   const counts = vcCounts();
   const tally  = adhocTally();
+  const svpT   = svpTally();
+  const ind = "    ";
   const lines = [
     `JCL BILLING SHEET — ${state.selectedDay} ${dateStr}`,
     `Physician: ${PHYSICIAN.name}   OHIP#: ${PHYSICIAN.ohip}`,
     `Hospital: ${PHYSICIAN.site}`,
     "",
-    `${col("#",4)}${col("Name",22)}${col("HCN",14)}${col("DOB",12)}${col("Visit Code",28)}${col("Procedures",36)}Diagnosis`,
-    "─".repeat(120),
-    ...rows.map(r=>`${col(r.num,4)}${col(r.name,22)}${col(r.hcn,14)}${col(r.dob,12)}${col(r.visit,28)}${col(r.adhoc,36)}${r.diag}`),
-    "─".repeat(120),
-    "",
-    "BATCH TOTALS — VISIT CODES:",
-    ...state.visitCodes.filter(c=>counts[c.id]>0).map(c=>`  ${c.label} (${c.description}): ${counts[c.id]}`),
-    "",
-    ...(tally.length>0 ? ["BATCH TOTALS — PROCEDURES:", ...tally.map(a=>`  ${a.label} [${a.ohip}]: ${a.count}`), ""] : []),
-    `Total visit claims: ${filled}/${state.roster.length}`,
-    filled<state.roster.length ? `⚠ Unbilled: ${state.roster.length-filled}` : "✓ All "+state.roster.length+" patients billed",
-  ].join("\n");
+    `${pad("#",4)}${pad("Name",24)}${pad("HCN",14)}${pad("DOB",12)}Visit Code`,
+    "─".repeat(90),
+  ];
+  rows.forEach(r=>{
+    const name = r.name || `Patient ${Number(r.num)}`;
+    const visit = r.visit ? `${r.visit.code} (${r.visit.desc})` : "—";
+    lines.push(`${pad(r.num,4)}${pad(name,24)}${pad(r.hcn||"—",14)}${pad(r.dob||"—",12)}${visit}`);
+    if (r.adhoc.length) lines.push(`${ind}Procedures: ${r.adhoc.map(a=>`${a.label} [${a.ohip}]`).join(", ")}`);
+    if (r.svp.length)   lines.push(`${ind}Special visit: ${r.svp.map(s=>`${s.label} [${s.ohip}]`).join(", ")}`);
+    if (r.diag.length)  lines.push(`${ind}Dx: ${r.diag.map(d=>`${d.label} ${d.desc}`).join(", ")}`);
+  });
+  lines.push("─".repeat(90), "", "BATCH TOTALS — VISIT CODES:");
+  state.visitCodes.filter(c=>counts[c.id]>0).forEach(c=>lines.push(`  ${c.label} (${c.description}): ${counts[c.id]}`));
+  lines.push("");
+  if (tally.length>0) { lines.push("BATCH TOTALS — PROCEDURES:"); tally.forEach(a=>lines.push(`  ${a.label} [${a.ohip}]: ${a.count}`)); lines.push(""); }
+  if (svpT.length>0)  { lines.push("BATCH TOTALS — SPECIAL VISIT PREMIUMS:"); svpT.forEach(s=>lines.push(`  ${s.label} [${s.ohip}]: ${s.count}`)); lines.push(""); }
+  lines.push(`Total visit claims: ${filled}/${state.roster.length}`);
+  lines.push(filled<state.roster.length ? `⚠ Unbilled: ${state.roster.length-filled}` : "✓ All "+state.roster.length+" patients billed");
+  const text = lines.join("\n");
 
-  navigator.clipboard.writeText(lines).then(()=>{
+  navigator.clipboard.writeText(text).then(()=>{
     showSaveBanner();
   }).catch(()=>{
-    // fallback
     const ta = document.createElement("textarea");
-    ta.value = lines; ta.style.position="fixed"; ta.style.opacity="0";
+    ta.value = text; ta.style.position="fixed"; ta.style.opacity="0";
     document.body.appendChild(ta); ta.select();
     document.execCommand("copy");
     document.body.removeChild(ta);
@@ -868,6 +958,7 @@ function showCopyOverlay() {
   let copyVisit = true;
   let copyProc = true;
   let copyDiag = false;
+  let copySVP = false;
 
   const overlay = document.createElement("div");
   overlay.className = "copy-overlay";
@@ -908,6 +999,7 @@ function showCopyOverlay() {
   opts.appendChild(makeOpt("Visit Codes", "Primary care code per patient", true, v => copyVisit = v));
   opts.appendChild(makeOpt("Procedures & Consults", "All ad-hoc codes per patient", true, v => copyProc = v));
   opts.appendChild(makeOpt("Diagnostic Codes", "ICD-10 / Dx codes per patient", false, v => copyDiag = v));
+  opts.appendChild(makeOpt("Special Visit Premiums", "Travel / first / additional person seen", false, v => copySVP = v));
   card.appendChild(opts);
 
   // Target day picker
@@ -955,7 +1047,7 @@ function showCopyOverlay() {
       status.className = "sync-status err";
       return;
     }
-    if (!copyVisit && !copyProc && !copyDiag) {
+    if (!copyVisit && !copyProc && !copyDiag && !copySVP) {
       status.textContent = "Select at least one thing to copy.";
       status.className = "sync-status err";
       return;
@@ -967,6 +1059,7 @@ function showCopyOverlay() {
         if (copyVisit) targetData[i].visitCode = srcPt.visitCode;
         if (copyProc)  targetData[i].adhoc = [...srcPt.adhoc];
         if (copyDiag)  targetData[i].diag  = [...srcPt.diag];
+        if (copySVP)   targetData[i].svp   = [...(srcPt.svp||[])];
       });
     });
     saveState();
@@ -1043,24 +1136,15 @@ function showHistoryDetail(rec, listOverlay) {
   card.appendChild(el("div","copy-title", `${rec.dayName} · ${formatDisplayDate(rec.date)}`));
   card.appendChild(el("div","copy-sub", `${rec.physician||PHYSICIAN.name} · OHIP ${rec.ohip||PHYSICIAN.ohip} · ${rec.filled}/${rec.total} billed`));
 
-  const tbl = el("table","summary-table");
-  const thead = el("thead"); const tr0 = el("tr");
-  ["Name","HCN","Visit","Procedures","Dx"].forEach(h=>{ const th=el("th"); th.textContent=h; tr0.appendChild(th); });
-  thead.appendChild(tr0); tbl.appendChild(thead);
-  const tbody = el("tbody");
-  rec.patients.forEach(p=>{
-    if (!p.visit && p.adhoc.length===0 && p.diag.length===0) return;
-    const tr = el("tr");
-    const tdName = el("td"); tdName.style.cssText="font-weight:600;white-space:nowrap;"; tdName.textContent = p.name || "—";
-    const tdHcn  = el("td"); tdHcn.style.cssText="font-family:monospace;font-size:9px;white-space:nowrap;"; tdHcn.textContent = p.hcn || "—";
-    const tdVc   = el("td"); tdVc.textContent = p.visit ? p.visit.code : "—";
-    const tdAd   = el("td"); tdAd.textContent = p.adhoc.map(a=>a.label).join(", ") || "—";
-    const tdDg   = el("td"); tdDg.textContent = p.diag.map(d=>d.label).join(", ") || "—";
-    [tdName,tdHcn,tdVc,tdAd,tdDg].forEach(td=>tr.appendChild(td));
-    tbody.appendChild(tr);
+  const blocks = div("");
+  rec.patients.forEach((p,i)=>{
+    const row = { num: p.num || String(i+1).padStart(2,"0"), name: p.name, hcn: p.hcn, dob: p.dob,
+                  visit: p.visit ? { code: p.visit.code, desc: p.visit.desc, color: p.visit.color } : null,
+                  adhoc: p.adhoc || [], svp: p.svp || [], diag: p.diag || [] };
+    if (!rowHasData(row)) return;
+    blocks.appendChild(summaryBlock(row));
   });
-  tbl.appendChild(tbody);
-  card.appendChild(tbl);
+  card.appendChild(blocks);
 
   const btns = div("sync-btns");
   btns.style.marginTop = "14px";
@@ -1112,6 +1196,8 @@ function render() {
   const filled = pts.filter(p=>p.visitCode).length;
   const counts = vcCounts();
   const tally  = adhocTally();
+  const svpT   = svpTally();
+  const hasExtras = tally.length>0 || svpT.length>0;
   const wb     = weekBilled();
 
   // ── Header
@@ -1149,7 +1235,7 @@ function render() {
   const dayTabs = div("day-tabs");
   DAYS.forEach((d,i)=>{
     const t = btn("day-tab"+(state.selectedDay===d?" active":""), "", ()=>{
-      state.selectedDay=d; state.showAdhoc=null; state.showDiag=null; state.showVC=null; render();
+      state.selectedDay=d; state.showAdhoc=null; state.showDiag=null; state.showVC=null; state.showSVP=null; render();
     });
     const nameSpan = document.createElement("span"); nameSpan.textContent = DAY_SHORT[i];
     t.appendChild(nameSpan);
@@ -1229,7 +1315,7 @@ function render() {
     });
     const adCard = div("vc-card");
     adCard.style.borderTop="3px solid #b94a1a"; adCard.style.maxWidth="56px";
-    const adNum = div("vc-num", String(tally.reduce((n,a)=>n+a.count,0)));
+    const adNum = div("vc-num", String(tally.reduce((n,a)=>n+a.count,0) + svpT.reduce((n,a)=>n+a.count,0)));
     adNum.style.color="#b94a1a";
     adCard.appendChild(adNum);
     adCard.appendChild(div("vc-lbl","Add-ons"));
@@ -1253,7 +1339,7 @@ function render() {
     const colHdr = div("pt-col-headers");
     colHdr.appendChild(div("pt-col-hdr","Patient"));
     colHdr.appendChild(div("pt-col-hdr","Visit Code"));
-    colHdr.appendChild(div("pt-col-hdr","Procedures / Dx"));
+    colHdr.appendChild(div("pt-col-hdr","Proc / SVP / Dx"));
     colHdr.appendChild(div(""));
     ptList.appendChild(colHdr);
 
@@ -1277,7 +1363,7 @@ function render() {
       const activeVC = state.visitCodes.find(c=>c.id===data.visitCode);
       const vcSelBtn = btn("vc-select-btn"+(activeVC?" has-code":""), activeVC?activeVC.label:"— VC", ()=>{
         state.showVC = state.showVC===i ? null : i;
-        state.showAdhoc = null; state.showDiag = null; render();
+        state.showAdhoc = null; state.showDiag = null; state.showSVP = null; render();
       });
       if (activeVC) { vcSelBtn.style.background=activeVC.color; vcSelBtn.style.borderColor=activeVC.color; }
       main.appendChild(vcSelBtn);
@@ -1286,7 +1372,7 @@ function render() {
       const acts = div(""); acts.style.cssText="display:flex;gap:4px;flex:1;margin-left:4px;";
       const procBtn = btn("pt-action-btn", data.adhoc.length>0?`+P(${data.adhoc.length})`:"+ Proc", ()=>{
         state.showAdhoc = state.showAdhoc===i ? null : i;
-        state.showDiag = null; state.showVC = null; render();
+        state.showDiag = null; state.showVC = null; state.showSVP = null; render();
       });
       procBtn.style.border = state.showAdhoc===i ? "1px solid #b94a1a" : "1px solid #e0c8b0";
       procBtn.style.color  = state.showAdhoc===i ? "#fff" : "#b94a1a";
@@ -1294,13 +1380,22 @@ function render() {
 
       const diagBtn = btn("pt-action-btn", data.diag.length>0?`+D(${data.diag.length})`:"+ Dx", ()=>{
         state.showDiag = state.showDiag===i ? null : i;
-        state.showAdhoc = null; state.showVC = null; render();
+        state.showAdhoc = null; state.showVC = null; state.showSVP = null; render();
       });
       diagBtn.style.border = state.showDiag===i ? "1px solid #5a6a7a" : "1px solid #c0c8d8";
       diagBtn.style.color  = state.showDiag===i ? "#fff" : "#5a6a7a";
       diagBtn.style.background = state.showDiag===i ? "#5a6a7a" : "#fff";
 
-      acts.appendChild(procBtn); acts.appendChild(diagBtn);
+      const svpN = (data.svp||[]).length;
+      const svpBtn = btn("pt-action-btn", svpN>0?`+S(${svpN})`:"+ SVP", ()=>{
+        state.showSVP = state.showSVP===i ? null : i;
+        state.showAdhoc = null; state.showDiag = null; state.showVC = null; render();
+      });
+      svpBtn.style.border = state.showSVP===i ? "1px solid #9a3a6a" : "1px solid #d8bccb";
+      svpBtn.style.color  = state.showSVP===i ? "#fff" : "#9a3a6a";
+      svpBtn.style.background = state.showSVP===i ? "#9a3a6a" : "#fff";
+
+      acts.appendChild(procBtn); acts.appendChild(diagBtn); acts.appendChild(svpBtn);
       main.appendChild(acts);
 
       const chk = div("pt-check", data.visitCode?"✓":"");
@@ -1311,9 +1406,11 @@ function render() {
       // extras pills
       const activeAdhoc = (state.customAdhoc || ADHOC_CODES).filter(a=>data.adhoc.includes(a.id));
       const activeDiag  = state.diagCodes.filter(d=>data.diag.includes(d.id));
-      if (activeAdhoc.length||activeDiag.length) {
+      const activeSVP = SVP_CODES.filter(s=>(data.svp||[]).includes(s.id));
+      if (activeAdhoc.length||activeDiag.length||activeSVP.length) {
         const extras = div("pt-extras");
         activeAdhoc.forEach(a=>extras.appendChild(pillEl(a.label,a.color)));
+        activeSVP.forEach(s=>extras.appendChild(pillEl(s.label,s.color)));
         activeDiag.forEach(d=>extras.appendChild(pillEl(d.label,"#5a6a7a")));
         ptRow.appendChild(extras);
       }
@@ -1385,16 +1482,38 @@ function render() {
       }
 
 
+      // SVP picker
+      if (state.showSVP===i) {
+        const picker = div("picker");
+        picker.appendChild(div("picker-title","Special Visit Premium (hospital in-patient)"));
+        [...new Set(SVP_CODES.map(s=>s.group))].forEach(grp=>{
+          picker.appendChild(div("vc-group-label", grp));
+          const grid = div("picker-grid");
+          SVP_CODES.filter(s=>s.group===grp).forEach(s=>{
+            const sel = (data.svp||[]).includes(s.id);
+            const b = btn("picker-btn-vc"+(sel?" sel":""),"",()=>toggleSVP(i,s.id));
+            if (sel) { b.style.background=s.color; b.style.borderColor=s.color; }
+            else { b.style.borderColor=s.color+"70"; }
+            const codeS=el("span","vc-code"); codeS.textContent=s.ohip;
+            const descS=el("span","vc-desc"); descS.textContent=s.description;
+            b.appendChild(codeS); b.appendChild(descS);
+            grid.appendChild(b);
+          });
+          picker.appendChild(grid);
+        });
+        ptRow.appendChild(picker);
+      }
+
       ptList.appendChild(ptRow);
     });
     app.appendChild(ptList);
 
     // adhoc tally
-    if (tally.length>0) {
+    if (hasExtras) {
       const at = div("adhoc-tally");
-      at.appendChild(div("adhoc-tally-title","Today's Procedure Add-ons"));
+      at.appendChild(div("adhoc-tally-title","Today's Procedure & Special Visit Add-ons"));
       const items = div("adhoc-tally-items");
-      tally.forEach(a=>{
+      [...tally, ...svpT].forEach(a=>{
         const item = div("adhoc-tally-item");
         item.style.border=`1px solid ${a.color}50`;
         const cnt = el("span",""); cnt.style.cssText=`font-weight:700;color:${a.color};`; cnt.textContent=`${a.count}×`;
@@ -1411,7 +1530,7 @@ function render() {
     app.appendChild(btn("btn-copy","⎘ Copy Today's Codes to Other Days",showCopyOverlay));
     const bb = div("bottom-btns");
     const toSumBtn = btn("btn-primary","View JCL Summary →",()=>{ state.view="summary"; render(); });
-    if (filled===0&&tally.length===0) toSumBtn.disabled=true;
+    if (filled===0&&!hasExtras) toSumBtn.disabled=true;
     bb.appendChild(toSumBtn);
     bb.appendChild(btn("btn-danger","Clear Day",()=>{ if(confirm("Clear all entries for "+state.selectedDay+"?")) clearDay(); }));
     app.appendChild(bb);
@@ -1419,7 +1538,7 @@ function render() {
 
   // ── SUMMARY VIEW
   if (state.view==="summary") {
-    if (filled===0&&tally.length===0) {
+    if (filled===0&&!hasExtras) {
       app.appendChild(div("empty-state",`No entries for ${state.selectedDay} yet.`));
     } else {
       const box = div("summary-box");
@@ -1431,33 +1550,13 @@ function render() {
       box.appendChild(sumPhys);
 
       // table
-      const tbl = el("table","summary-table");
-      const thead = el("thead"); const tr0 = el("tr");
-      ["#","Name","HCN","DOB","Visit","Procedures","Dx"].forEach(h=>{ const th=el("th"); th.textContent=h; tr0.appendChild(th); });
-      thead.appendChild(tr0); tbl.appendChild(thead);
-      const tbody = el("tbody");
+      const sumList = div("");
       pts.forEach((data,i)=>{
-        const pat = state.roster[i];
-        const vc  = state.visitCodes.find(c=>c.id===data.visitCode);
-        const ads = (state.customAdhoc || ADHOC_CODES).filter(a=>data.adhoc.includes(a.id));
-        const dgs = state.diagCodes.filter(d=>data.diag.includes(d.id));
-        if (!vc&&ads.length===0&&dgs.length===0) return;
-        const tr = el("tr");
-        const tdNum=el("td"); tdNum.style.cssText="font-family:monospace;font-size:9px;color:#8a95a0;"; tdNum.textContent=String(i+1).padStart(2,"0");
-        const tdName=el("td"); tdName.style.cssText=`font-weight:600;color:${pat.name?"#1a2a3a":"#b0bcc8"};white-space:nowrap;`; tdName.textContent=pat.name||`Pt.${i+1}`;
-        const tdHcn=el("td"); tdHcn.style.cssText=`font-family:monospace;color:${pat.hcn?"#2a3a4a":"#c0ccd8"};white-space:nowrap;font-size:9px;`; tdHcn.textContent=pat.hcn||"—";
-        const tdDob=el("td"); tdDob.style.cssText="color:#4a5a6a;white-space:nowrap;font-size:9px;"; tdDob.textContent=pat.dob||"—";
-        const tdVc=el("td");
-        if (vc) { const p=pillEl(vc.label,vc.color); tdVc.appendChild(p); }
-        const tdAd=el("td");
-        ads.forEach(a=>tdAd.appendChild(pillEl(a.ohip,a.color)));
-        const tdDg=el("td");
-        dgs.forEach(d=>tdDg.appendChild(pillEl(d.label,"#5a6a7a")));
-        [tdNum,tdName,tdHcn,tdDob,tdVc,tdAd,tdDg].forEach(td=>tr.appendChild(td));
-        tbody.appendChild(tr);
+        const row = patientRow(i, data);
+        if (!rowHasData(row)) return;
+        sumList.appendChild(summaryBlock(row));
       });
-      tbl.appendChild(tbody);
-      box.appendChild(tbl);
+      box.appendChild(sumList);
 
       // batch totals
       const bs = div("batch-section");
@@ -1483,6 +1582,19 @@ function render() {
           chip.appendChild(n); chip.appendChild(l); chip.appendChild(o); chips2.appendChild(chip);
         });
         bs.appendChild(chips2);
+      }
+      if (svpT.length>0) {
+        bs.appendChild(div("batch-label","Batch Totals — Special Visit Premiums"));
+        const chips3 = div("batch-chips");
+        svpT.forEach(s=>{
+          const chip=div("batch-chip");
+          chip.style.cssText=`background:#fdf4f8;border:1px solid ${s.color}30;`;
+          const n=el("span"); n.style.cssText=`font-size:14px;font-weight:800;color:${s.color};`; n.textContent=`${s.count}×`;
+          const l=el("span"); l.style.cssText="font-size:10px;color:#4a3a2a;margin-left:3px;"; l.textContent=s.label;
+          const o=el("span"); o.style.cssText="font-size:9px;color:#9a8a7a;margin-left:3px;"; o.textContent=`[${s.ohip}]`;
+          chip.appendChild(n); chip.appendChild(l); chip.appendChild(o); chips3.appendChild(chip);
+        });
+        bs.appendChild(chips3);
       }
       box.appendChild(bs);
 
